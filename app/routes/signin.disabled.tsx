@@ -1,11 +1,9 @@
 import { Form } from '@remix-run/react';
 import { useState } from 'react';
 import widerLogoRounded from '/wider_logo.png';
-import { useLogin } from '~/lib/auth/auth';
 
 export default function SignInPage() {
   const [loading, setLoading] = useState(false);
-  const mutation = useLogin();
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -16,19 +14,7 @@ export default function SignInPage() {
     const password = formData.get('password') as string;
 
     const modifiedValues = { email, password, site: 'auth' };
-    mutation.mutate(modifiedValues, {
-      onSuccess: () => {
-        // toast.success(t('Toast_Message.welcome_back!_sign_in_successful'));
-        console.log('Sign in successful');
-        setLoading(false);
-      },
-      onError: (e) => {
-        // toast.error('Wrong credentials!');
-        console.log('Sign in failed');
-        console.log(e);
-        setLoading(false);
-      },
-    });
+    console.log('Modified Values:', modifiedValues);
   }
 
   return (
