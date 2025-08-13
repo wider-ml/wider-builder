@@ -15,6 +15,7 @@ export function Header() {
           {/* <span className="i-bolt:logo-text?mask w-[46px] inline-block" /> */}
           <img src="/wider-logo-light.png" alt="Wider logo" className="w-[90px] inline-block dark:hidden" />
           <img src="/wider-logo-dark.png" alt="Wider logo" className="w-[90px] inline-block hidden dark:block" />
+
         </a>
       </div>
 
