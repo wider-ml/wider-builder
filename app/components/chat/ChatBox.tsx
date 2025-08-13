@@ -15,10 +15,10 @@ import { SupabaseConnection } from './SupabaseConnection';
 import { ExpoQrModal } from '~/components/workbench/ExpoQrModal';
 import styles from './BaseChat.module.scss';
 import type { ProviderInfo } from '~/types/model';
-import { ColorSchemeDialog } from '~/components/ui/ColorSchemeDialog';
 import type { DesignScheme } from '~/types/design-scheme';
 import type { ElementInfo } from '~/components/workbench/Inspector';
-import { McpTools } from './MCPTools';
+
+// Removed unused imports: ColorSchemeDialog, McpTools
 
 interface ChatBoxProps {
   isModelSettingsCollapsed: boolean;
@@ -67,13 +67,7 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
   return (
     <div
       className={classNames(
-        'relative bg-bolt-elements-background-depth-2 backdrop-blur p-3 rounded-lg border border-bolt-elements-borderColor relative w-full max-w-chat mx-auto z-prompt',
-
-        /*
-         * {
-         *   'sticky bottom-2': chatStarted,
-         * },
-         */
+        'relative bg-bolt-elements-background-depth-2 backdrop-blur p-2 rounded-lg border border-bolt-elements-borderColor relative w-full max-w-chat mx-auto z-prompt',
       )}
     >
       <svg className={classNames(styles.PromptEffectContainer)}>
@@ -92,15 +86,8 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
             <stop offset="50%" stopColor="#b44aff" stopOpacity="80%"></stop>
             <stop offset="100%" stopColor="#b44aff" stopOpacity="0%"></stop>
           </linearGradient>
-          <linearGradient id="shine-gradient">
-            <stop offset="0%" stopColor="white" stopOpacity="0%"></stop>
-            <stop offset="40%" stopColor="#ffffff" stopOpacity="80%"></stop>
-            <stop offset="50%" stopColor="#ffffff" stopOpacity="80%"></stop>
-            <stop offset="100%" stopColor="white" stopOpacity="0%"></stop>
-          </linearGradient>
         </defs>
         <rect className={classNames(styles.PromptEffectLine)} pathLength="100" strokeLinecap="round"></rect>
-        <rect className={classNames(styles.PromptShine)} x="48" y="24" width="70" height="1"></rect>
       </svg>
       <div>
         <ClientOnly>
@@ -150,6 +137,7 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
           />
         )}
       </ClientOnly>
+      {/* Keep selectedElement functionality for compatibility */}
       {props.selectedElement && (
         <div className="flex mx-1.5 gap-2 items-center justify-between rounded-lg rounded-b-none border border-b-none border-bolt-elements-borderColor text-bolt-elements-textPrimary flex py-1 px-2.5 font-medium text-xs">
           <div className="flex gap-2 items-center lowercase">
@@ -166,13 +154,11 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
           </button>
         </div>
       )}
-      <div
-        className={classNames('relative shadow-xs border border-bolt-elements-borderColor backdrop-blur rounded-lg')}
-      >
+      <div className={classNames('relative shadow-xs backdrop-blur rounded-lg')}>
         <textarea
           ref={props.textareaRef}
           className={classNames(
-            'w-full pl-4 pt-4 pr-16 outline-none resize-none text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary bg-transparent text-sm',
+            'w-full pl-3 pt-3 pr-14 outline-none resize-none text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary bg-transparent text-sm',
             'transition-all duration-200',
             'hover:border-bolt-elements-focus',
           )}
@@ -236,7 +222,7 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
             minHeight: props.TEXTAREA_MIN_HEIGHT,
             maxHeight: props.TEXTAREA_MAX_HEIGHT,
           }}
-          placeholder={props.chatMode === 'build' ? 'How can Wider help you today?' : 'What would you like to discuss?'}
+          placeholder="How can Wider help you today?"
           translate="no"
         />
         <ClientOnly>
@@ -258,10 +244,12 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
             />
           )}
         </ClientOnly>
-        <div className="flex justify-between items-center text-sm p-4 pt-2">
-          <div className="flex gap-1 items-center">
-            <ColorSchemeDialog designScheme={props.designScheme} setDesignScheme={props.setDesignScheme} />
-            <McpTools />
+        <div className="flex justify-between items-center text-sm p-2 pt-1">
+          <div className="flex gap-0.5 items-center">
+            {/* HIDDEN: Design Palette - still imported but not rendered */}
+            {/* <ColorSchemeDialog designScheme={props.designScheme} setDesignScheme={props.setDesignScheme} /> */}
+            {/* HIDDEN: MCP Tools - still imported but not rendered */}
+            {/* <McpTools /> */}
             <IconButton title="Upload file" className="transition-all" onClick={() => props.handleFileUpload()}>
               <div className="i-ph:paperclip text-xl"></div>
             </IconButton>
@@ -287,7 +275,8 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
               onStop={props.stopListening}
               disabled={props.isStreaming}
             />
-            {props.chatStarted && (
+            {/* HIDDEN: Discuss Mode Toggle - still functional but not rendered */}
+            {/* {props.chatStarted && (
               <IconButton
                 title="Discuss"
                 className={classNames(
@@ -303,7 +292,7 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
                 <div className={`i-ph:chats text-xl`} />
                 {props.chatMode === 'discuss' ? <span>Discuss</span> : <span />}
               </IconButton>
-            )}
+            )} */}
             <IconButton
               title="Model Settings"
               className={classNames('transition-all flex items-center gap-1', {
