@@ -82,6 +82,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 import { logStore } from './lib/stores/logs';
+import { AuthProvider } from './lib/auth/AuthProvider';
 
 export default function App() {
   const theme = useStore(themeStore);
@@ -97,7 +98,9 @@ export default function App() {
 
   return (
     <Layout>
-      <Outlet />
+      <AuthProvider>
+        <Outlet />
+      </AuthProvider>
     </Layout>
   );
 }

@@ -1,9 +1,10 @@
-import { json, type MetaFunction } from '@remix-run/cloudflare';
+import { type LoaderFunctionArgs, type MetaFunction } from '@remix-run/cloudflare';
 import { ClientOnly } from 'remix-utils/client-only';
 import { BaseChat } from '~/components/chat/BaseChat';
 import { Chat } from '~/components/chat/Chat.client';
 import { Header } from '~/components/header/Header';
 import BackgroundRays from '~/components/ui/BackgroundRays';
+import { requireAuth } from '~/utils/auth.server';
 
 export const meta: MetaFunction = () => {
   return [
@@ -12,7 +13,14 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export const loader = () => json({});
+export async function loader({ request }: LoaderFunctionArgs) {
+  const { accessToken, refreshToken } = await requireAuth(request);
+
+  return {
+    accessToken,
+    refreshToken,
+  };
+}
 
 /**
  * Landing page component for Bolt
