@@ -1,5 +1,4 @@
 import { redirect } from '@remix-run/node';
-import { parse } from 'cookie';
 
 /*
  * async function verifyToken(token: string) {
@@ -20,13 +19,24 @@ import { parse } from 'cookie';
  * }
  */
 
+function parseCookies(cookieHeader: string | null) {
+  const cookies: Record<string, string> = {};
+
+  if (!cookieHeader) {
+    return cookies;
+  }
+
+  cookieHeader.split(';').forEach((cookie) => {
+    const [name, ...rest] = cookie.split('=');
+    cookies[name.trim()] = rest.join('=').trim();
+  });
+
+  return cookies;
+}
+
 export async function requireAuth(request: Request) {
-  const cookieHeader = request.headers.get('Cookie');
-
-  const cookies = parse(cookieHeader || '');
-
+  const cookies = parseCookies(request.headers.get('Cookie'));
   const accessToken = cookies.wider_access_token;
-
   const refreshToken = cookies.wider_refresh_token;
 
   if (!accessToken) {
