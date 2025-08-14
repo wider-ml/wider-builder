@@ -36,8 +36,8 @@ function parseCookies(cookieHeader: string | null) {
 
 export async function requireAuth(request: Request) {
   const cookies = parseCookies(request.headers.get('Cookie'));
-  const accessToken = cookies.wider_access_token;
-  const refreshToken = cookies.wider_refresh_token;
+  const accessToken = cookies.wider_shared_access_token;
+  const refreshToken = cookies.wider_shared_refresh_token;
 
   if (!accessToken) {
     const URL = process.env.WIDER_APP_URL || 'https://dev.widerml.com';
