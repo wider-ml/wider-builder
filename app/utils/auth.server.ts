@@ -39,11 +39,9 @@ export async function requireAuth(request: Request) {
   const accessToken = cookies.wider_access_token;
   const refreshToken = cookies.wider_refresh_token;
 
-  const backURL = process.env.OWN_APP_URL;
-
   if (!accessToken) {
     const URL = process.env.WIDER_APP_URL || 'https://dev.widerml.com';
-    throw redirect(`${URL}/en/auth/sign-in?next=${backURL}`); // redirect if no token
+    throw redirect(`${URL}/en/auth/sign-in?next=builder.widerml.com`); // redirect if no token
   }
 
   // Optional: verify token with your backend API
