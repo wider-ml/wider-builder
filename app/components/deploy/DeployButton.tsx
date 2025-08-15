@@ -2,31 +2,42 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useStore } from '@nanostores/react';
 import { netlifyConnection } from '~/lib/stores/netlify';
 import { vercelConnection } from '~/lib/stores/vercel';
+import { awsConnection, checkAWSCredentials } from '~/lib/stores/aws';
 import { workbenchStore } from '~/lib/stores/workbench';
 import { streamingState } from '~/lib/stores/streaming';
 import { classNames } from '~/utils/classNames';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NetlifyDeploymentLink } from '~/components/chat/NetlifyDeploymentLink.client';
 import { VercelDeploymentLink } from '~/components/chat/VercelDeploymentLink.client';
+import { AWSAmplifyDeploymentLink } from '~/components/chat/AWSAmplifyDeploymentLink.client';
 import { useVercelDeploy } from '~/components/deploy/VercelDeploy.client';
 import { useNetlifyDeploy } from '~/components/deploy/NetlifyDeploy.client';
+import { useAWSAmplifyDeploy } from '~/components/deploy/AWSAmplifyDeploy.client';
 
 interface DeployButtonProps {
   onVercelDeploy?: () => Promise<void>;
   onNetlifyDeploy?: () => Promise<void>;
+  onAWSAmplifyDeploy?: () => Promise<void>;
 }
 
-export const DeployButton = ({ onVercelDeploy, onNetlifyDeploy }: DeployButtonProps) => {
+export const DeployButton = ({ onVercelDeploy, onNetlifyDeploy, onAWSAmplifyDeploy }: DeployButtonProps) => {
   const netlifyConn = useStore(netlifyConnection);
   const vercelConn = useStore(vercelConnection);
+  const awsConn = useStore(awsConnection);
   const [activePreviewIndex] = useState(0);
   const previews = useStore(workbenchStore.previews);
   const activePreview = previews[activePreviewIndex];
   const [isDeploying, setIsDeploying] = useState(false);
-  const [deployingTo, setDeployingTo] = useState<'netlify' | 'vercel' | null>(null);
+  const [deployingTo, setDeployingTo] = useState<'netlify' | 'vercel' | 'aws-amplify' | null>(null);
   const isStreaming = useStore(streamingState);
   const { handleVercelDeploy } = useVercelDeploy();
   const { handleNetlifyDeploy } = useNetlifyDeploy();
+  const { handleAWSAmplifyDeploy } = useAWSAmplifyDeploy();
+
+  // Check for AWS credentials on component mount
+  useEffect(() => {
+    checkAWSCredentials();
+  }, []);
 
   const handleVercelDeployClick = async () => {
     setIsDeploying(true);
@@ -53,6 +64,22 @@ export const DeployButton = ({ onVercelDeploy, onNetlifyDeploy }: DeployButtonPr
         await onNetlifyDeploy();
       } else {
         await handleNetlifyDeploy();
+      }
+    } finally {
+      setIsDeploying(false);
+      setDeployingTo(null);
+    }
+  };
+
+  const handleAWSAmplifyDeployClick = async () => {
+    setIsDeploying(true);
+    setDeployingTo('aws-amplify');
+
+    try {
+      if (onAWSAmplifyDeploy) {
+        await onAWSAmplifyDeploy();
+      } else {
+        await handleAWSAmplifyDeploy();
       }
     } finally {
       setIsDeploying(false);
@@ -123,6 +150,31 @@ export const DeployButton = ({ onVercelDeploy, onNetlifyDeploy }: DeployButtonPr
             />
             <span className="mx-auto">{!vercelConn.user ? 'No Vercel Account Connected' : 'Deploy to Vercel'}</span>
             {vercelConn.user && <VercelDeploymentLink />}
+          </DropdownMenu.Item>
+
+          <DropdownMenu.Item
+            className={classNames(
+              'cursor-pointer flex items-center w-full px-4 py-2 text-sm text-bolt-elements-textPrimary hover:bg-bolt-elements-item-backgroundActive gap-2 rounded-md group relative',
+              {
+                'opacity-60 cursor-not-allowed':
+                  isDeploying || !activePreview || !(awsConn.accessKeyId && awsConn.secretAccessKey),
+              },
+            )}
+            disabled={isDeploying || !activePreview || !(awsConn.accessKeyId && awsConn.secretAccessKey)}
+            onClick={handleAWSAmplifyDeployClick}
+          >
+            <img
+              className="w-5 h-5 bg-orange-500 p-1 rounded"
+              height="24"
+              width="24"
+              crossOrigin="anonymous"
+              src="https://cdn.simpleicons.org/amazonaws/white"
+              alt="aws"
+            />
+            <span className="mx-auto">
+              {!(awsConn.accessKeyId && awsConn.secretAccessKey) ? 'No AWS Account Connected' : 'Deploy to AWS Amplify'}
+            </span>
+            {awsConn.accessKeyId && awsConn.secretAccessKey && <AWSAmplifyDeploymentLink />}
           </DropdownMenu.Item>
 
           <DropdownMenu.Item
