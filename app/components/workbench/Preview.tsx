@@ -7,6 +7,7 @@ import { ScreenshotSelector } from './ScreenshotSelector';
 import { expoUrlAtom } from '~/lib/stores/qrCodeStore';
 import { ExpoQrModal } from '~/components/workbench/ExpoQrModal';
 import type { ElementInfo } from './Inspector';
+import { FullScreenshotCapture } from './FullScreenshotCapture';
 
 type ResizeSide = 'left' | 'right' | null;
 
@@ -69,6 +70,7 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
   const [isDeviceModeOn, setIsDeviceModeOn] = useState(false);
   const [widthPercent, setWidthPercent] = useState<number>(37.5);
   const [currentWidth, setCurrentWidth] = useState<number>(0);
+  const [shouldTakeScreenShot, setShouldTakeScreenShot] = useState<boolean>(false);
 
   const resizingState = useRef({
     isResizing: false,
@@ -673,6 +675,7 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
             onClick={() => setIsSelectionMode(!isSelectionMode)}
             className={isSelectionMode ? 'bg-bolt-elements-background-depth-3' : ''}
           />
+          <IconButton icon="i-ph:files" onClick={() => setShouldTakeScreenShot((prev) => !prev)} />
         </div>
 
         <div className="flex-grow flex items-center gap-1 bg-bolt-elements-preview-addressBar-background border border-bolt-elements-borderColor text-bolt-elements-preview-addressBar-text rounded-full px-1 py-1 text-sm hover:bg-bolt-elements-preview-addressBar-backgroundHover hover:focus-within:bg-bolt-elements-preview-addressBar-backgroundActive focus-within:bg-bolt-elements-preview-addressBar-backgroundActive focus-within-border-bolt-elements-borderColorActive focus-within:text-bolt-elements-preview-addressBar-textActive">
@@ -1008,6 +1011,11 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
                 isSelectionMode={isSelectionMode}
                 setIsSelectionMode={setIsSelectionMode}
                 containerRef={iframeRef}
+              />
+              <FullScreenshotCapture
+                iframeRef={iframeRef}
+                shouldTakeScreenshot={shouldTakeScreenShot}
+                onScreenshotComplete={() => setShouldTakeScreenShot(false)}
               />
             </>
           ) : (
