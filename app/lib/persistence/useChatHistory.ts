@@ -137,7 +137,7 @@ export function useChatHistory() {
                       if (value?.type === 'file') {
                         return `
                       <boltAction type="file" filePath="${key}">
-${value.content}
+                          ${value.content}
                       </boltAction>
                       `;
                       } else {
