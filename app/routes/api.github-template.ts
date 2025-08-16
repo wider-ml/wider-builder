@@ -211,7 +211,20 @@ export async function loader({ request, context }: { request: Request; context: 
 
   try {
     // Access environment variables from Cloudflare context or process.env
-    const githubToken = context?.cloudflare?.env?.GITHUB_TOKEN || process.env.GITHUB_TOKEN;
+    // For Remix apps, use server-side environment variables (without VITE_ prefix)
+    const githubToken =
+      context?.cloudflare?.env?.GITHUB_TOKEN ||
+      context?.cloudflare?.env?.VITE_GITHUB_ACCESS_TOKEN ||
+      process.env.GITHUB_TOKEN ||
+      process.env.VITE_GITHUB_ACCESS_TOKEN;
+
+    console.log(`Fetching repository: ${repo}`);
+    console.log(`Environment: ${isCloudflareEnvironment(context) ? 'Cloudflare' : 'Standard'}`);
+    console.log('GitHub token available:', !!githubToken);
+
+    if (!githubToken) {
+      console.warn('No GitHub token found. API requests may be rate limited.');
+    }
 
     let fileList;
 
