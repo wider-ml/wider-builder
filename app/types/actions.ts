@@ -56,9 +56,23 @@ export interface DeployAlert {
   description: string;
   content?: string;
   url?: string;
-  stage?: 'building' | 'deploying' | 'complete';
+  stage?: 'building' | 'deploying' | 'complete' | 'domain-setup';
   buildStatus?: 'pending' | 'running' | 'complete' | 'failed';
   deployStatus?: 'pending' | 'running' | 'complete' | 'failed';
+  domainStatus?: 'pending' | 'running' | 'complete' | 'failed';
+  domainName?: string;
+  source?: 'vercel' | 'netlify' | 'github' | 'aws-amplify';
+}
+
+export interface DomainAlert {
+  type: 'success' | 'error' | 'info' | 'warning';
+  title: string;
+  description: string;
+  content?: string;
+  url?: string;
+  domainName: string;
+  status: 'PENDING_VERIFICATION' | 'IN_PROGRESS' | 'PENDING_DEPLOYMENT' | 'AVAILABLE' | 'FAILED';
+  statusMessage?: string;
   source?: 'vercel' | 'netlify' | 'github' | 'aws-amplify';
 }
 

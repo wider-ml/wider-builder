@@ -7,6 +7,7 @@ import { path } from '~/utils/path';
 import { useState, useEffect } from 'react';
 import type { ActionCallbackData } from '~/lib/runtime/message-parser';
 import { chatId } from '~/lib/persistence/useChatHistory';
+import type { DomainAlert } from '~/types/actions';
 
 export function useAWSAmplifyDeploy() {
   const [isDeploying, setIsDeploying] = useState(false);
@@ -219,6 +220,21 @@ export function useAWSAmplifyDeploy() {
       const maxAttempts = 30; // 5 minutes timeout
       let attempts = 0;
       let deploymentStatus;
+      let domainStatus;
+
+      // Start domain status tracking if domain was created
+      if (data.domain?.customDomain) {
+        const domainAlert: DomainAlert = {
+          type: 'info',
+          title: 'Setting up Custom Domain',
+          description: 'Configuring your custom domain...',
+          domainName: data.domain.customDomain,
+          status: 'PENDING_VERIFICATION',
+          statusMessage: 'Domain verification in progress',
+          source: 'aws-amplify',
+        };
+        workbenchStore.domainAlert.set(domainAlert);
+      }
 
       while (attempts < maxAttempts) {
         try {
@@ -230,11 +246,92 @@ export function useAWSAmplifyDeploy() {
             body: JSON.stringify({
               appId: data.app.appId,
               jobId: data.deployment.jobId,
+              domainName: data.domain?.customDomain,
             }),
           });
 
           if (statusResponse.ok) {
             deploymentStatus = (await statusResponse.json()) as any;
+            domainStatus = deploymentStatus.domain;
+
+            // Update domain status in UI using domain alert
+            if (domainStatus && data.domain?.customDomain) {
+              console.log(`Received domain status update:`, {
+                domainName: data.domain.customDomain,
+                status: domainStatus.status,
+                message: domainStatus.message,
+                isReady: domainStatus.isReady,
+                url: domainStatus.url
+              });
+              
+              const currentDomainAlert = workbenchStore.domainAlert.get();
+              console.log(`Current domain alert:`, currentDomainAlert);
+              
+              if (domainStatus.status === 'AVAILABLE') {
+                console.log(`Domain ${data.domain.customDomain} is AVAILABLE! Updating UI...`);
+                const domainAlert: DomainAlert = {
+                  type: 'success',
+                  title: 'Custom Domain Ready',
+                  description: 'Your custom domain has been successfully configured and is now live.',
+                  domainName: data.domain.customDomain,
+                  status: 'AVAILABLE',
+                  statusMessage: 'Domain is live and ready to use',
+                  url: domainStatus.url,
+                  source: 'aws-amplify',
+                };
+                workbenchStore.domainAlert.set(domainAlert);
+              } else if (domainStatus.status === 'FAILED') {
+                const domainAlert: DomainAlert = {
+                  type: 'error',
+                  title: 'Domain Setup Failed',
+                  description: 'There was an issue setting up your custom domain.',
+                  domainName: data.domain.customDomain,
+                  status: 'FAILED',
+                  statusMessage: domainStatus.message || 'Domain setup failed',
+                  source: 'aws-amplify',
+                };
+                workbenchStore.domainAlert.set(domainAlert);
+              } else {
+                // Still in progress - update status and message based on current status
+                let title = 'Setting up Custom Domain';
+                let description = 'Configuring your custom domain...';
+                let statusMessage = '';
+
+                switch (domainStatus.status) {
+                  case 'PENDING_VERIFICATION':
+                    title = 'Verifying Domain';
+                    description = 'Verifying domain ownership and DNS configuration...';
+                    statusMessage = 'Domain verification in progress';
+                    break;
+                  case 'IN_PROGRESS':
+                    title = 'Processing Domain';
+                    description = 'Processing domain configuration and SSL certificate...';
+                    statusMessage = 'Domain processing in progress';
+                    break;
+                  case 'PENDING_DEPLOYMENT':
+                    title = 'Deploying Domain';
+                    description = 'Finalizing domain deployment and DNS propagation...';
+                    statusMessage = 'Domain deployment in progress';
+                    break;
+                  default:
+                    statusMessage = `Domain status: ${domainStatus.status}`;
+                }
+
+                // Only update if status has changed to avoid unnecessary re-renders
+                if (!currentDomainAlert || currentDomainAlert.status !== domainStatus.status) {
+                  const domainAlert: DomainAlert = {
+                    type: 'info',
+                    title,
+                    description,
+                    domainName: data.domain.customDomain,
+                    status: domainStatus.status as DomainAlert['status'],
+                    statusMessage,
+                    source: 'aws-amplify',
+                  };
+                  workbenchStore.domainAlert.set(domainAlert);
+                }
+              }
+            }
 
             if (deploymentStatus.status === 'SUCCEED') {
               break;
@@ -278,6 +375,142 @@ export function useAWSAmplifyDeploy() {
         url: data.app.url || `https://${data.app.appId}.amplifyapp.com`,
         source: 'aws-amplify',
       });
+
+      // Continue polling domain status even after deployment completes
+      if (data.domain?.customDomain && domainStatus && domainStatus.status !== 'AVAILABLE' && domainStatus.status !== 'FAILED') {
+        console.log('Deployment completed, but domain is still setting up. Continuing domain status polling...');
+        
+        const maxDomainAttempts = 20; // 3+ minutes for domain setup
+        let domainAttempts = 0;
+        
+        while (domainAttempts < maxDomainAttempts) {
+          try {
+            await new Promise((resolve) => setTimeout(resolve, 10000)); // Wait 10 seconds
+            
+            const domainStatusResponse = await fetch('/api/aws-amplify-status', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                appId: data.app.appId,
+                jobId: data.deployment.jobId,
+                domainName: data.domain.customDomain,
+              }),
+            });
+
+            if (domainStatusResponse.ok) {
+              const domainStatusData = (await domainStatusResponse.json()) as any;
+              const currentDomainStatus = domainStatusData.domain;
+
+              if (currentDomainStatus && data.domain?.customDomain) {
+                console.log(`[Post-deployment polling] Received domain status:`, {
+                  domainName: data.domain.customDomain,
+                  status: currentDomainStatus.status,
+                  message: currentDomainStatus.message,
+                  isReady: currentDomainStatus.isReady,
+                  url: currentDomainStatus.url
+                });
+                
+                const currentDomainAlert = workbenchStore.domainAlert.get();
+                console.log(`[Post-deployment polling] Current domain alert:`, currentDomainAlert);
+                
+                if (currentDomainStatus.status === 'AVAILABLE') {
+                  console.log(`[Post-deployment polling] Domain ${data.domain.customDomain} is AVAILABLE! Updating UI...`);
+                  const domainAlert: DomainAlert = {
+                    type: 'success',
+                    title: 'Custom Domain Ready',
+                    description: 'Your custom domain has been successfully configured and is now live.',
+                    domainName: data.domain.customDomain,
+                    status: 'AVAILABLE',
+                    statusMessage: 'Domain is live and ready to use',
+                    url: currentDomainStatus.url,
+                    source: 'aws-amplify',
+                  };
+                  workbenchStore.domainAlert.set(domainAlert);
+                  console.log(`Domain ${data.domain.customDomain} is now AVAILABLE!`);
+                  break; // Domain is ready, stop polling
+                } else if (currentDomainStatus.status === 'FAILED') {
+                  const domainAlert: DomainAlert = {
+                    type: 'error',
+                    title: 'Domain Setup Failed',
+                    description: 'There was an issue setting up your custom domain.',
+                    domainName: data.domain.customDomain,
+                    status: 'FAILED',
+                    statusMessage: currentDomainStatus.message || 'Domain setup failed',
+                    source: 'aws-amplify',
+                  };
+                  workbenchStore.domainAlert.set(domainAlert);
+                  console.log(`Domain ${data.domain.customDomain} setup FAILED: ${currentDomainStatus.message}`);
+                  break; // Domain failed, stop polling
+                } else {
+                  // Still in progress - update status
+                  let title = 'Setting up Custom Domain';
+                  let description = 'Configuring your custom domain...';
+                  let statusMessage = '';
+
+                  switch (currentDomainStatus.status) {
+                    case 'PENDING_VERIFICATION':
+                      title = 'Verifying Domain';
+                      description = 'Verifying domain ownership and DNS configuration...';
+                      statusMessage = 'Domain verification in progress';
+                      break;
+                    case 'IN_PROGRESS':
+                      title = 'Processing Domain';
+                      description = 'Processing domain configuration and SSL certificate...';
+                      statusMessage = 'Domain processing in progress';
+                      break;
+                    case 'PENDING_DEPLOYMENT':
+                      title = 'Deploying Domain';
+                      description = 'Finalizing domain deployment and DNS propagation...';
+                      statusMessage = 'Domain deployment in progress';
+                      break;
+                    default:
+                      statusMessage = `Domain status: ${currentDomainStatus.status}`;
+                  }
+
+                  // Only update if status has changed
+                  if (!currentDomainAlert || currentDomainAlert.status !== currentDomainStatus.status) {
+                    const domainAlert: DomainAlert = {
+                      type: 'info',
+                      title,
+                      description,
+                      domainName: data.domain.customDomain,
+                      status: currentDomainStatus.status as DomainAlert['status'],
+                      statusMessage,
+                      source: 'aws-amplify',
+                    };
+                    workbenchStore.domainAlert.set(domainAlert);
+                    console.log(`Domain ${data.domain.customDomain} status updated to: ${currentDomainStatus.status}`);
+                  }
+                }
+              }
+            }
+
+            domainAttempts++;
+          } catch (error) {
+            console.error('Domain status check error:', error);
+            domainAttempts++;
+          }
+        }
+
+        if (domainAttempts >= maxDomainAttempts) {
+          console.log('Domain status polling timed out');
+          const currentDomainAlert = workbenchStore.domainAlert.get();
+          if (currentDomainAlert && currentDomainAlert.status !== 'AVAILABLE' && currentDomainAlert.status !== 'FAILED') {
+            const domainAlert: DomainAlert = {
+              type: 'warning',
+              title: 'Domain Setup Taking Longer',
+              description: 'Domain setup is taking longer than expected. Please check AWS Amplify console.',
+              domainName: data.domain.customDomain,
+              status: currentDomainAlert.status,
+              statusMessage: 'Domain setup is taking longer than expected',
+              source: 'aws-amplify',
+            };
+            workbenchStore.domainAlert.set(domainAlert);
+          }
+        }
+      }
 
       return true;
     } catch (error) {

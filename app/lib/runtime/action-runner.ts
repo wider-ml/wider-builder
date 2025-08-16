@@ -501,12 +501,13 @@ export class ActionRunner {
 
   // Add this method declaration to the class
   handleDeployAction(
-    stage: 'building' | 'deploying' | 'complete',
+    stage: 'building' | 'deploying' | 'complete' | 'domain-setup',
     status: ActionStatus,
     details?: {
       url?: string;
       error?: string;
       source?: 'netlify' | 'vercel' | 'github' | 'aws-amplify';
+      domainName?: string;
     },
   ): void {
     if (!this.onDeployAlert) {
@@ -521,21 +522,29 @@ export class ActionRunner {
         ? 'Building Application'
         : stage === 'deploying'
           ? 'Deploying Application'
-          : 'Deployment Complete';
+          : stage === 'domain-setup'
+            ? 'Setting up Domain'
+            : 'Deployment Complete';
 
     const description =
       status === 'failed'
-        ? `${stage === 'building' ? 'Build' : 'Deployment'} failed`
+        ? `${stage === 'building' ? 'Build' : stage === 'domain-setup' ? 'Domain setup' : 'Deployment'} failed`
         : status === 'running'
-          ? `${stage === 'building' ? 'Building' : 'Deploying'} your application...`
+          ? `${stage === 'building' ? 'Building' : stage === 'domain-setup' ? 'Setting up domain' : 'Deploying'} your application...`
           : status === 'complete'
-            ? `${stage === 'building' ? 'Build' : 'Deployment'} completed successfully`
-            : `Preparing to ${stage === 'building' ? 'build' : 'deploy'} your application`;
+            ? `${stage === 'building' ? 'Build' : stage === 'domain-setup' ? 'Domain setup' : 'Deployment'} completed successfully`
+            : `Preparing to ${stage === 'building' ? 'build' : stage === 'domain-setup' ? 'set up domain' : 'deploy'} your application`;
 
     const buildStatus =
-      stage === 'building' ? status : stage === 'deploying' || stage === 'complete' ? 'complete' : 'pending';
+      stage === 'building'
+        ? status
+        : stage === 'deploying' || stage === 'complete' || stage === 'domain-setup'
+          ? 'complete'
+          : 'pending';
 
-    const deployStatus = stage === 'building' ? 'pending' : status;
+    const deployStatus = stage === 'building' ? 'pending' : stage === 'domain-setup' ? 'complete' : status;
+
+    const domainStatus = stage === 'domain-setup' ? status : 'pending';
 
     this.onDeployAlert({
       type: alertType,
@@ -546,6 +555,8 @@ export class ActionRunner {
       stage,
       buildStatus: buildStatus as any,
       deployStatus: deployStatus as any,
+      domainStatus: domainStatus as any,
+      domainName: details?.domainName,
       source: details?.source || 'netlify',
     });
   }

@@ -38,4 +38,5 @@ export interface AWSAmplifyAppInfo {
   name: string;
   url: string;
   chatId: string;
+  customDomain?: string;
 }

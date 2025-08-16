@@ -1,4 +1,5 @@
 import { type ActionFunctionArgs, json } from '@remix-run/cloudflare';
+import { AmplifyClient, ListAppsCommand } from '@aws-sdk/client-amplify';
 
 export async function action({ request }: ActionFunctionArgs) {
   try {
@@ -11,47 +12,49 @@ export async function action({ request }: ActionFunctionArgs) {
       return json({ error: 'AWS credentials not configured in environment variables' }, { status: 401 });
     }
 
-    /*
-     * Simulate fetching Amplify apps
-     * In a real implementation, you would use AWS SDK to list apps
-     */
-
-    // Generate some mock apps for demonstration
-    const mockApps = [
-      {
-        appId: 'd1234567890abcdef',
-        appArn: `arn:aws:amplify:${region}:123456789012:apps/d1234567890abcdef`,
-        name: 'my-react-app',
-        description: 'A React application deployed with Amplify',
-        repository: '',
-        platform: 'WEB',
-        createTime: new Date(Date.now() - 86400000 * 7).toISOString(), // 7 days ago
-        updateTime: new Date(Date.now() - 86400000 * 1).toISOString(), // 1 day ago
-        defaultDomain: 'd1234567890abcdef.amplifyapp.com',
-        enableBranchAutoBuild: false,
-        enableBasicAuth: false,
+    // Initialize AWS Amplify client
+    const amplifyClient = new AmplifyClient({
+      region,
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
       },
-      {
-        appId: 'd0987654321fedcba',
-        appArn: `arn:aws:amplify:${region}:123456789012:apps/d0987654321fedcba`,
-        name: 'my-nextjs-app',
-        description: 'A Next.js application deployed with Amplify',
-        repository: '',
-        platform: 'WEB_COMPUTE',
-        createTime: new Date(Date.now() - 86400000 * 14).toISOString(), // 14 days ago
-        updateTime: new Date(Date.now() - 86400000 * 3).toISOString(), // 3 days ago
-        defaultDomain: 'd0987654321fedcba.amplifyapp.com',
-        enableBranchAutoBuild: false,
-        enableBasicAuth: false,
-      },
-    ];
-
-    console.log(`Returning ${mockApps.length} mock AWS Amplify apps for region ${region}`);
-
-    return json({
-      apps: mockApps,
-      totalApps: mockApps.length,
     });
+
+    try {
+      // List all Amplify apps
+      const listAppsCommand = new ListAppsCommand({
+        maxResults: 50, // Limit to 50 apps for performance
+      });
+
+      const appsResponse = await amplifyClient.send(listAppsCommand);
+      const apps = appsResponse.apps || [];
+
+      // Map AWS Amplify apps to our expected format
+      const mappedApps = apps.map((app) => ({
+        appId: app.appId || '',
+        appArn: app.appArn || '',
+        name: app.name || '',
+        description: app.description || '',
+        repository: app.repository || '',
+        platform: app.platform || 'WEB',
+        createTime: app.createTime?.toISOString() || '',
+        updateTime: app.updateTime?.toISOString() || '',
+        defaultDomain: app.defaultDomain || '',
+        enableBranchAutoBuild: app.enableBranchAutoBuild || false,
+        enableBasicAuth: app.enableBasicAuth || false,
+      }));
+
+      console.log(`Retrieved ${mappedApps.length} AWS Amplify apps from region ${region}`);
+
+      return json({
+        apps: mappedApps,
+        totalApps: mappedApps.length,
+      });
+    } catch (error) {
+      console.error('Error listing AWS Amplify apps:', error);
+      throw new Error(`Failed to list Amplify apps: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   } catch (error) {
     console.error('AWS Amplify stats error:', error);
     return json({ error: 'Failed to fetch AWS Amplify statistics' }, { status: 500 });

@@ -1,4 +1,12 @@
 import { type ActionFunctionArgs, json } from '@remix-run/cloudflare';
+import {
+  AmplifyClient,
+  CreateAppCommand,
+  StartDeploymentCommand,
+  GetAppCommand,
+  CreateDomainAssociationCommand,
+  Platform,
+} from '@aws-sdk/client-amplify';
 import type { AWSAmplifyAppInfo } from '~/types/aws';
 
 // Function to detect framework from project files
@@ -137,78 +145,331 @@ export async function action({ request }: ActionFunctionArgs) {
       return json({ error: 'AWS credentials not configured in environment variables' }, { status: 401 });
     }
 
-    /*
-     * For now, we'll simulate the deployment process
-     * In a real implementation, you would use the AWS SDK or AWS CLI
-     * This is a simplified version that demonstrates the flow
-     */
+    // Initialize AWS client
+    const amplifyClient = new AmplifyClient({
+      region,
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+      },
+    });
 
     let targetAppId = appId;
     let appInfo: AWSAmplifyAppInfo | undefined;
 
-    // Detect framework from the source files if not provided
+    // Detect framework from the files if not provided
     let detectedFramework = framework;
 
-    if (!detectedFramework && sourceFiles) {
-      detectedFramework = detectFramework(sourceFiles);
-      console.log('Detected framework from source files:', detectedFramework);
+    if (!detectedFramework && files) {
+      detectedFramework = detectFramework(files);
+      console.log('Detected framework from files:', detectedFramework);
     }
 
-    // Generate a mock app ID if none provided
+    // Map framework to Amplify platform
+    const getPlatform = (framework: string): Platform => {
+      switch (framework) {
+        case 'nextjs':
+          return Platform.WEB;
+        case 'react':
+        case 'vite':
+          return Platform.WEB;
+        case 'vue':
+          return Platform.WEB;
+        case 'angular':
+          return Platform.WEB;
+        case 'static':
+          return Platform.WEB;
+        default:
+          return Platform.WEB;
+      }
+    };
+
+    // Get build settings based on framework
+    const getBuildSettings = (framework: string) => {
+      const buildSettings: Record<string, any> = {
+        nextjs: {
+          commands: {
+            preBuild: 'npm ci',
+            build: 'npm run build',
+          },
+        },
+        react: {
+          commands: {
+            preBuild: 'npm ci',
+            build: 'npm run build',
+          },
+        },
+        vite: {
+          commands: {
+            preBuild: 'npm ci',
+            build: 'npm run build',
+          },
+        },
+        vue: {
+          commands: {
+            preBuild: 'npm ci',
+            build: 'npm run build',
+          },
+        },
+        angular: {
+          commands: {
+            preBuild: 'npm ci',
+            build: 'npm run build',
+          },
+        },
+        static: {
+          commands: {
+            build: 'echo "No build required for static site"',
+          },
+        },
+      };
+
+      return buildSettings[framework] || buildSettings.static;
+    };
+
+    // Create or get existing Amplify app
     if (!targetAppId) {
-      targetAppId = `d${Math.random().toString(36).substring(2, 15)}`;
+      const appName = `wider-web-${chatId}-${Date.now()}`;
+      console.log(`Creating new Amplify app with name: ${appName}`);
 
-      const appName = `bolt-diy-${chatId}-${Date.now()}`;
+      try {
+        const createAppCommand = new CreateAppCommand({
+          name: appName,
+          description: `Deployed from Wider Builder - Chat ${chatId}`,
+          platform: getPlatform(detectedFramework || 'static'),
+          buildSpec: JSON.stringify({
+            version: '1.0',
+            frontend: {
+              phases: getBuildSettings(detectedFramework || 'static'),
+              artifacts: {
+                baseDirectory:
+                  detectedFramework === 'nextjs'
+                    ? '.next'
+                    : detectedFramework === 'vite'
+                      ? 'dist'
+                      : detectedFramework === 'react'
+                        ? 'build'
+                        : detectedFramework === 'vue'
+                          ? 'dist'
+                          : detectedFramework === 'angular'
+                            ? 'dist'
+                            : '.',
+                files: ['**/*'],
+              },
+            },
+          }),
+        });
 
-      appInfo = {
-        appId: targetAppId,
-        name: appName,
-        url: `https://${targetAppId}.amplifyapp.com`,
-        chatId,
-      };
+        const createAppResponse = await amplifyClient.send(createAppCommand);
+        targetAppId = createAppResponse.app?.appId;
+        console.log(`Created Amplify app with ID: ${targetAppId}`);
+
+        if (!targetAppId) {
+          throw new Error('Failed to create Amplify app - no app ID returned');
+        }
+
+        appInfo = {
+          appId: targetAppId,
+          name: appName,
+          url: `https://${createAppResponse.app?.defaultDomain}`,
+          chatId,
+        };
+
+        console.log(`Created new Amplify app: ${targetAppId}`);
+      } catch (error) {
+        console.error('Error creating Amplify app:', error);
+        throw new Error(`Failed to create Amplify app: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
     } else {
-      appInfo = {
+      // Get existing app info
+      console.log(`Using existing Amplify app ID: ${targetAppId}`);
+      try {
+        const getAppCommand = new GetAppCommand({ appId: targetAppId });
+        const getAppResponse = await amplifyClient.send(getAppCommand);
+
+        appInfo = {
+          appId: targetAppId,
+          name: getAppResponse.app?.name || `bolt-diy-${chatId}`,
+          url: `https://${getAppResponse.app?.defaultDomain}`,
+          chatId,
+        };
+
+        console.log(`Using existing Amplify app: ${targetAppId}`);
+      } catch (error) {
+        console.error('Else catch: ---- Error getting Amplify app:', error);
+        throw new Error(`Failed to get Amplify app: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
+    // Use files for deployment
+    const filesToDeploy = files;
+
+    if (!filesToDeploy || Object.keys(filesToDeploy).length === 0) {
+      throw new Error('No source files provided for deployment');
+    }
+
+    console.log(`Deploying ${Object.keys(filesToDeploy).length} source files`);
+
+    // Create a branch if it doesn't exist
+    try {
+      const { CreateBranchCommand, GetBranchCommand } = await import('@aws-sdk/client-amplify');
+
+      // Check if main branch exists
+      try {
+        const getBranchCommand = new GetBranchCommand({
+          appId: targetAppId,
+          branchName: 'main',
+        });
+        await amplifyClient.send(getBranchCommand);
+        console.log('Main branch already exists');
+      } catch (branchError) {
+        // Branch doesn't exist, create it
+        console.log('Creating main branch...');
+        const createBranchCommand = new CreateBranchCommand({
+          appId: targetAppId,
+          branchName: 'main',
+          description: 'Main deployment branch',
+          enableAutoBuild: false,
+          enableBasicAuth: false,
+        });
+        await amplifyClient.send(createBranchCommand);
+        console.log('Created main branch');
+      }
+    } catch (error) {
+      console.error('Error managing branch:', error);
+      // Continue with deployment even if branch management fails
+    }
+
+    // Use CreateDeployment with direct file upload (no S3 needed)
+    try {
+      console.log('Creating deployment using CreateDeployment...');
+
+      // Import crypto for MD5 hashing
+      const crypto = await import('crypto');
+
+      // Create fileMap with MD5 hashes
+      const fileMap: Record<string, string> = {};
+      for (const [filePath, content] of Object.entries(filesToDeploy)) {
+        const normalizedPath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
+        const md5Hash = crypto.createHash('md5').update(content, 'utf8').digest('hex');
+        fileMap[normalizedPath] = md5Hash;
+      }
+
+      const { CreateDeploymentCommand } = await import('@aws-sdk/client-amplify');
+      const createDeploymentCommand = new CreateDeploymentCommand({
         appId: targetAppId,
-        name: `bolt-diy-${chatId}`,
-        url: `https://${targetAppId}.amplifyapp.com`,
-        chatId,
-      };
-    }
+        branchName: 'main',
+        fileMap,
+      });
 
-    // Create a ZIP file with the build files (for demonstration)
-    const JSZip = (await import('jszip')).default;
-    const zip = new JSZip();
+      const createDeploymentResponse = await amplifyClient.send(createDeploymentCommand);
+      const jobId = createDeploymentResponse.jobId;
+      const uploadUrls = createDeploymentResponse.fileUploadUrls;
 
-    // Add files to ZIP
-    for (const [filePath, content] of Object.entries(files)) {
-      // Ensure file path doesn't start with a slash
-      const normalizedPath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
-      zip.file(normalizedPath, content);
-    }
+      if (!jobId) {
+        throw new Error('Failed to create deployment - no job ID returned');
+      }
 
-    const zipBuffer = await zip.generateAsync({ type: 'arraybuffer' });
+      console.log(`Created deployment with job ID: ${jobId}`);
+      console.log(`Received ${Object.keys(uploadUrls || {}).length} upload URLs`);
 
-    // Simulate deployment job creation
-    const jobId = `j${Math.random().toString(36).substring(2, 15)}`;
+      // Upload files to the provided URLs
+      if (uploadUrls) {
+        for (const [filePath, uploadUrl] of Object.entries(uploadUrls)) {
+          const fileContent = filesToDeploy[filePath] || filesToDeploy[`/${filePath}`];
+          if (fileContent) {
+            try {
+              const response = await fetch(uploadUrl, {
+                method: 'PUT',
+                body: fileContent,
+                headers: {
+                  'Content-Type': 'application/octet-stream',
+                },
+              });
 
-    /*
-     * In a real implementation, you would:
-     * 1. Use AWS SDK to create/update Amplify app
-     * 2. Upload the ZIP file to S3
-     * 3. Start a deployment job
-     * 4. Return the job ID for status tracking
-     */
+              if (!response.ok) {
+                throw new Error(`Failed to upload ${filePath}: ${response.statusText}`);
+              }
 
-    console.log(`Simulating AWS Amplify deployment for app ${targetAppId} with ${Object.keys(files).length} files`);
+              console.log(`Successfully uploaded: ${filePath}`);
+            } catch (uploadError) {
+              console.error(`Error uploading ${filePath}:`, uploadError);
+              throw new Error(
+                `Failed to upload file ${filePath}: ${uploadError instanceof Error ? uploadError.message : 'Unknown error'}`,
+              );
+            }
+          }
+        }
+      }
 
-    return json({
-      success: true,
-      deployment: {
+      // After files are uploaded, start the deployment
+      console.log(`Starting deployment for job ID: ${jobId}`);
+
+      const startDeploymentCommand = new StartDeploymentCommand({
+        appId: targetAppId,
+        branchName: 'main',
         jobId,
-        status: 'PENDING',
-      },
-      app: appInfo,
-    });
+      });
+
+      await amplifyClient.send(startDeploymentCommand);
+      console.log(`Started deployment successfully for job ID: ${jobId}`);
+
+      // Create custom domain association
+      const customDomain = `${targetAppId}.widerml.site`;
+      let domainAssociationStatus = null;
+
+      try {
+        console.log(`Creating domain association for: ${customDomain}`);
+
+        const createDomainCommand = new CreateDomainAssociationCommand({
+          appId: targetAppId,
+          domainName: customDomain,
+          subDomainSettings: [
+            {
+              prefix: '',
+              branchName: 'main',
+            },
+          ],
+          enableAutoSubDomain: false,
+        });
+
+        const domainResponse = await amplifyClient.send(createDomainCommand);
+        domainAssociationStatus = domainResponse.domainAssociation?.domainStatus;
+
+        console.log(`Domain association created for ${customDomain} with status: ${domainAssociationStatus}`);
+
+        // Update app info with custom domain
+        if (appInfo) {
+          appInfo.url = `https://${customDomain}`;
+          appInfo.customDomain = customDomain;
+        }
+      } catch (domainError) {
+        console.warn('Failed to create domain association:', domainError);
+        // Continue without failing the deployment
+        domainAssociationStatus = 'FAILED';
+      }
+
+      return json({
+        success: true,
+        deployment: {
+          jobId,
+          status: 'RUNNING',
+        },
+        app: appInfo,
+        domain: {
+          customDomain,
+          status: domainAssociationStatus,
+          note:
+            domainAssociationStatus === 'FAILED'
+              ? 'Domain association failed, but deployment is proceeding. You can manually configure the domain in AWS Amplify console.'
+              : 'Custom domain configured successfully. DNS propagation may take a few minutes.',
+        },
+        message: 'Deployment created, files uploaded, and deployment started successfully.',
+      });
+    } catch (error) {
+      console.error('Error with CreateDeployment method:', error);
+      throw new Error(`Failed to create deployment: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   } catch (error) {
     console.error('AWS Amplify deploy error:', error);
     return json({ error: 'Deployment failed' }, { status: 500 });
