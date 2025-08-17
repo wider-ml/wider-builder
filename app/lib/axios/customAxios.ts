@@ -37,7 +37,7 @@ function authRequestInterceptor(config: InternalAxiosRequestConfig) {
 }
 
 const axios = Axios.create({
-  baseURL: ROOT_API_URL,
+  // No baseURL needed for Remix - frontend and backend are same server
   headers: {
     'Content-Type': 'application/json',
   },
@@ -57,12 +57,9 @@ axios.interceptors.request.use((config) => {
 
 axios.interceptors.response.use(
   (response) => {
-    axios.defaults.baseURL = ROOT_API_URL;
     return response.data;
   },
   async (error) => {
-    axios.defaults.baseURL = ROOT_API_URL;
-
     const originalRequest = error.config;
 
     if (!originalRequest.retry) {
@@ -112,7 +109,9 @@ axios.interceptors.response.use(
       } catch (retryError) {
         processQueue(retryError, null);
         deleteCookie('wider_access_token');
-        window.location.replace('/en/auth/sign-in');
+
+        const URL = process.env.WIDER_APP_URL || 'https://dev.widerml.com';
+        window.location.replace(`${URL}/en/auth/sign-in?next=builder.widerml.com`);
 
         return await Promise.reject(retryError);
       } finally {

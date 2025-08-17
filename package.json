@@ -130,6 +130,7 @@
     "jszip": "^3.10.1",
     "lucide-react": "^0.485.0",
     "mime": "^4.0.4",
+    "mongodb": "^6.18.0",
     "nanostores": "^0.10.3",
     "ollama-ai-provider": "^0.15.2",
     "path-browserify": "^1.0.1",
