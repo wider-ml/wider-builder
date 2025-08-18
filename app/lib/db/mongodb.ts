@@ -3,13 +3,11 @@ import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('MongoDB');
 
-/*
- * MongoDB connection string
- * const MONGODB_URI =
- *   'mongodb+srv://iamthemunna10:wider12345@munna-cluster.d248zqq.mongodb.net/wider-builder?retryWrites=true&w=majority&appName=munna-cluster';
- */
+//  MongoDB connection string
+const MONGODB_URI =
+  'mongodb+srv://iamthemunna10:wider12345@munna-cluster.d248zqq.mongodb.net/wider-builder?retryWrites=true&w=majority&appName=munna-cluster';
 
-const MONGODB_URI = process.env.MOONGODB_CONNECTION_STRING;
+// const MONGODB_URI = process.env.MOONGODB_CONNECTION_STRING;
 
 let client: MongoClient | null = null;
 let db: Db | null = null;
