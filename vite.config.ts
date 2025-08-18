@@ -10,6 +10,9 @@ dotenv.config();
 
 export default defineConfig((config) => {
   return {
+    optimizeDeps: {
+      exclude: ['undici', 'util'],
+    },
     server: {
       port: 3000,
     },

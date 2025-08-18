@@ -71,10 +71,12 @@ export async function requireAuth(request: Request) {
   const accessToken = cookies.wider_shared_access_token;
   const refreshToken = cookies.wider_shared_refresh_token;
 
-  if (!accessToken) {
-    const URL = process.env.WIDER_APP_URL || 'https://dev.widerml.com';
-    throw redirect(`${URL}/en/auth/sign-in?next=builder.widerml.com`); // redirect if no token
-  }
+  /*
+   * if (!accessToken) {
+   *   const URL = process.env.WIDER_APP_URL || 'https://dev.widerml.com';
+   *   throw redirect(`${URL}/en/auth/sign-in?next=builder.widerml.com`); // redirect if no token
+   * }
+   */
 
   // Optional: verify token with your backend API
 

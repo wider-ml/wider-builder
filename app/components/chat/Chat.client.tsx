@@ -128,6 +128,7 @@ export const ChatImpl = memo(
     const [designScheme, setDesignScheme] = useState<DesignScheme>(defaultDesignScheme);
     const actionAlert = useStore(workbenchStore.alert);
     const deployAlert = useStore(workbenchStore.deployAlert);
+    const domainAlert = useStore(workbenchStore.domainAlert);
     const supabaseConn = useStore(supabaseConnection);
     const selectedProject = supabaseConn.stats?.projects?.find(
       (project) => project.id === supabaseConn.selectedProjectId,
@@ -687,6 +688,8 @@ export const ChatImpl = memo(
         clearSupabaseAlert={() => workbenchStore.clearSupabaseAlert()}
         deployAlert={deployAlert}
         clearDeployAlert={() => workbenchStore.clearDeployAlert()}
+        domainAlert={domainAlert}
+        clearDomainAlert={() => workbenchStore.clearDomainAlert()}
         llmErrorAlert={llmErrorAlert}
         clearLlmErrorAlert={clearApiErrorAlert}
         data={chatData}

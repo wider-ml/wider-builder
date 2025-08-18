@@ -19,8 +19,9 @@ import { ExamplePrompts } from '~/components/chat/ExamplePrompts';
 import GitCloneButton from './GitCloneButton';
 import type { ProviderInfo } from '~/types/model';
 import StarterTemplates from './StarterTemplates';
-import type { ActionAlert, SupabaseAlert, DeployAlert, LlmErrorAlertType } from '~/types/actions';
+import type { ActionAlert, SupabaseAlert, DeployAlert, DomainAlert, LlmErrorAlertType } from '~/types/actions';
 import DeployChatAlert from '~/components/deploy/DeployAlert';
+import DomainChatAlert from '~/components/deploy/DomainAlert';
 import ChatAlert from './ChatAlert';
 import type { ModelInfo } from '~/lib/modules/llm/types';
 import ProgressCompilation from './ProgressCompilation';
@@ -70,6 +71,8 @@ interface BaseChatProps {
   clearSupabaseAlert?: () => void;
   deployAlert?: DeployAlert;
   clearDeployAlert?: () => void;
+  domainAlert?: DomainAlert;
+  clearDomainAlert?: () => void;
   llmErrorAlert?: LlmErrorAlertType;
   clearLlmErrorAlert?: () => void;
   data?: JSONValue[] | undefined;
@@ -115,6 +118,8 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       clearAlert,
       deployAlert,
       clearDeployAlert,
+      domainAlert,
+      clearDomainAlert,
       supabaseAlert,
       clearSupabaseAlert,
       llmErrorAlert,
@@ -398,6 +403,16 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                       postMessage={(message: string | undefined) => {
                         sendMessage?.({} as any, message);
                         clearSupabaseAlert?.();
+                      }}
+                    />
+                  )}
+                  {domainAlert && (
+                    <DomainChatAlert
+                      alert={domainAlert}
+                      clearAlert={() => clearDomainAlert?.()}
+                      postMessage={(message: string | undefined) => {
+                        sendMessage?.({} as any, message);
+                        clearDomainAlert?.();
                       }}
                     />
                   )}
