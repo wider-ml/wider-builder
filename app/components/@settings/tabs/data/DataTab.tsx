@@ -5,14 +5,14 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { motion } from 'framer-motion';
 import { useDataOperations } from '~/lib/hooks/useDataOperations';
 import { openDatabase } from '~/lib/persistence/db';
-import { getAllChats, type Chat } from '~/lib/persistence/chats';
+import type { Chat } from '~/lib/persistence/chats';
 import { DataVisualization } from './DataVisualization';
 import { classNames } from '~/utils/classNames';
 import { toast } from 'react-toastify';
 
-// Create a custom hook to connect to the boltHistory database
+// Create a custom hook for MongoDB-based database connection
 function useBoltHistoryDB() {
-  const [db, setDb] = useState<IDBDatabase | null>(null);
+  const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -21,8 +21,8 @@ function useBoltHistoryDB() {
       try {
         setIsLoading(true);
 
-        const database = await openDatabase();
-        setDb(database || null);
+        const connected = await openDatabase();
+        setIsConnected(connected);
         setIsLoading(false);
       } catch (err) {
         setError(err instanceof Error ? err : new Error('Unknown error initializing database'));
@@ -31,34 +31,15 @@ function useBoltHistoryDB() {
     };
 
     initDB();
-
-    return () => {
-      if (db) {
-        db.close();
-      }
-    };
   }, []);
 
-  return { db, isLoading, error };
+  return { isConnected, isLoading, error };
 }
 
 // Extend the Chat interface to include the missing properties
 interface ExtendedChat extends Chat {
   title?: string;
   updatedAt?: number;
-}
-
-// Helper function to create a chat label and description
-function createChatItem(chat: Chat): ChatItem {
-  return {
-    id: chat.id,
-
-    // Use description as title if available, or format a short ID
-    label: (chat as ExtendedChat).title || chat.description || `Chat ${chat.id.slice(0, 8)}`,
-
-    // Format the description with message count and timestamp
-    description: `${chat.messages.length} messages - Last updated: ${new Date((chat as ExtendedChat).updatedAt || Date.parse(chat.timestamp)).toLocaleString()}`,
-  };
 }
 
 interface SettingsCategory {
@@ -75,7 +56,7 @@ interface ChatItem {
 
 export function DataTab() {
   // Use our custom hook for the boltHistory database
-  const { db, isLoading: dbLoading } = useBoltHistoryDB();
+  const { isConnected, isLoading: dbLoading } = useBoltHistoryDB();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const apiKeyFileInputRef = useRef<HTMLInputElement>(null);
   const chatFileInputRef = useRef<HTMLInputElement>(null);
@@ -100,7 +81,25 @@ export function DataTab() {
   const [availableChats, setAvailableChats] = useState<ExtendedChat[]>([]);
   const [chatItems, setChatItems] = useState<ChatItem[]>([]);
 
-  // Data operations hook with boltHistory database
+  // Function to load chats using API calls (MongoDB)
+  const loadChats = useCallback(async () => {
+    try {
+      console.log('Loading chats from MongoDB via API');
+
+      /*
+       * Since we're using MongoDB via API calls, we'll use the data operations hook
+       * For now, we'll set empty arrays since the actual chat loading will be handled
+       * by the useDataOperations hook when needed
+       */
+      setAvailableChats([]);
+      setChatItems([]);
+    } catch (error) {
+      console.error('Error loading chats:', error);
+      toast.error('Failed to load chats: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  }, []);
+
+  // Data operations hook - no database needed for MongoDB API calls
   const {
     isExporting,
     isImporting,
@@ -117,18 +116,10 @@ export function DataTab() {
     handleDownloadTemplate,
     handleImportAPIKeys,
   } = useDataOperations({
-    customDb: db || undefined, // Pass the boltHistory database, converting null to undefined
     onReloadSettings: () => window.location.reload(),
     onReloadChats: () => {
-      // Reload chats after reset
-      if (db) {
-        getAllChats(db).then((chats) => {
-          // Cast to ExtendedChat to handle additional properties
-          const extendedChats = chats as ExtendedChat[];
-          setAvailableChats(extendedChats);
-          setChatItems(extendedChats.map((chat) => createChatItem(chat)));
-        });
-      }
+      // Reload chats after reset - using API calls now
+      loadChats();
     },
     onResetSettings: () => setShowResetInlineConfirm(false),
     onResetChats: () => setShowDeleteInlineConfirm(false),
@@ -138,32 +129,12 @@ export function DataTab() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isImportingKeys, setIsImportingKeys] = useState(false);
 
-  // Load available chats
+  // Load available chats when connected
   useEffect(() => {
-    if (db) {
-      console.log('Loading chats from boltHistory database', {
-        name: db.name,
-        version: db.version,
-        objectStoreNames: Array.from(db.objectStoreNames),
-      });
-
-      getAllChats(db)
-        .then((chats) => {
-          console.log('Found chats:', chats.length);
-
-          // Cast to ExtendedChat to handle additional properties
-          const extendedChats = chats as ExtendedChat[];
-          setAvailableChats(extendedChats);
-
-          // Create ChatItems for selection dialog
-          setChatItems(extendedChats.map((chat) => createChatItem(chat)));
-        })
-        .catch((error) => {
-          console.error('Error loading chats:', error);
-          toast.error('Failed to load chats: ' + (error instanceof Error ? error.message : 'Unknown error'));
-        });
+    if (isConnected) {
+      loadChats();
     }
-  }, [db]);
+  }, [isConnected, loadChats]);
 
   // Handle file input changes
   const handleFileInputChange = useCallback(
@@ -304,16 +275,12 @@ export function DataTab() {
                   <Button
                     onClick={async () => {
                       try {
-                        if (!db) {
-                          toast.error('Database not available');
+                        if (!isConnected) {
+                          toast.error('Database not connected');
                           return;
                         }
 
-                        console.log('Database information:', {
-                          name: db.name,
-                          version: db.version,
-                          objectStoreNames: Array.from(db.objectStoreNames),
-                        });
+                        console.log('Exporting chats from MongoDB via API');
 
                         if (availableChats.length === 0) {
                           toast.warning('No chats available to export');

@@ -4,6 +4,7 @@ import { useStore } from '@nanostores/react';
 import { classNames } from '~/utils/classNames';
 import { profileStore } from '~/lib/stores/profile';
 import type { TabType, Profile } from './types';
+import { useUser } from '~/lib/hooks/useUser';
 
 const BetaLabel = () => (
   <span className="px-1.5 py-0.5 rounded-full bg-purple-500/10 dark:bg-purple-500/20 text-[10px] font-medium text-purple-600 dark:text-purple-400 ml-2">
@@ -17,6 +18,7 @@ interface AvatarDropdownProps {
 
 export const AvatarDropdown = ({ onSelectTab }: AvatarDropdownProps) => {
   const profile = useStore(profileStore) as Profile;
+  const { user, isAuthenticated } = useUser();
 
   return (
     <DropdownMenu.Root>
@@ -78,7 +80,11 @@ export const AvatarDropdown = ({ onSelectTab }: AvatarDropdownProps) => {
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-medium text-sm text-gray-900 dark:text-white truncate">
-                {profile?.username || 'Guest User'}
+                {isAuthenticated
+                  ? user?.firstName && user?.lastName
+                    ? `${user.firstName} ${user.lastName}`
+                    : user?.username || user?.email || 'User'
+                  : 'Guest User'}
               </div>
               {profile?.bio && <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{profile.bio}</div>}
             </div>
