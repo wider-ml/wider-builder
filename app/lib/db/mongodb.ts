@@ -3,11 +3,9 @@ import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('MongoDB');
 
-//  MongoDB connection string
 const MONGODB_URI =
-  'mongodb+srv://iamthemunna10:wider12345@munna-cluster.d248zqq.mongodb.net/wider-builder?retryWrites=true&w=majority&appName=munna-cluster';
-
-// const MONGODB_URI = process.env.MOONGODB_CONNECTION_STRING;
+  process.env.MONGODB_CONNECTION_STRING ||
+  'mongodb+srv://iamthemunna10:wider12345@munna-cluster.d248zqq.mongodb.net/wider-builder?retryWrites=true&w=majority';
 
 let client: MongoClient | null = null;
 let db: Db | null = null;
@@ -22,12 +20,20 @@ export async function connectToDatabase(): Promise<Db> {
     throw new Error('MongoDB connection string is not defined');
   }
 
+  console.log('MONGODB_URI:', MONGODB_URI);
+
   try {
     if (!client) {
       client = new MongoClient(MONGODB_URI, {
         maxPoolSize: 10,
-        serverSelectionTimeoutMS: 5000,
-        socketTimeoutMS: 45000,
+        serverSelectionTimeoutMS: 10000,
+        socketTimeoutMS: 0,
+        connectTimeoutMS: 10000,
+        maxIdleTimeMS: 0,
+        retryWrites: true,
+        tls: true,
+        tlsAllowInvalidCertificates: false,
+        tlsAllowInvalidHostnames: false,
       });
     }
 
@@ -45,6 +51,7 @@ export async function connectToDatabase(): Promise<Db> {
 
 export async function getChatsCollection(): Promise<Collection> {
   const database = await connectToDatabase();
+
   return database.collection('chats');
 }
 

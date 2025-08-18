@@ -110,8 +110,9 @@ axios.interceptors.response.use(
         processQueue(retryError, null);
         deleteCookie('wider_access_token');
 
-        const URL = process.env.WIDER_APP_URL || 'https://dev.widerml.com';
-        window.location.replace(`${URL}/en/auth/sign-in?next=builder.widerml.com`);
+        // const URL = process.env.WIDER_APP_URL || 'https://dev.widerml.com';
+
+        // window.location.replace(`${URL}/en/auth/sign-in?next=builder.widerml.com`);
 
         return await Promise.reject(retryError);
       } finally {
