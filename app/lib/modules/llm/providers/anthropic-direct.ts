@@ -94,7 +94,7 @@ export class AnthropicDirectProvider {
 
       const requestBody: any = {
         model: modelName,
-        max_tokens: Math.min(options.maxTokens || 4000, 4000),
+        max_tokens: Math.min(options.maxTokens || 8000, 8000),
         messages: anthropicMessages,
         stream: true,
       };
@@ -163,13 +163,25 @@ export class AnthropicDirectProvider {
 
                     try {
                       const parsed = JSON.parse(data);
-                      if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+
+                      // Handle different Anthropic streaming event types
+                      if (parsed.type === 'message_start') {
+                        logger.info('Message started');
+                      } else if (parsed.type === 'content_block_start') {
+                        logger.info('Content block started');
+                      } else if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
                         const streamPart: LanguageModelV1StreamPart = {
                           type: 'text-delta',
                           textDelta: parsed.delta.text,
                         };
                         controller.enqueue(streamPart);
+                      } else if (parsed.type === 'content_block_stop') {
+                        logger.info('Content block stopped');
+                      } else if (parsed.type === 'message_delta') {
+                        // Handle message delta events
+                        logger.info('Message delta received');
                       } else if (parsed.type === 'message_stop') {
+                        logger.info('Message stopped, finishing stream');
                         const finishPart: LanguageModelV1StreamPart = {
                           type: 'finish',
                           finishReason: 'stop',
@@ -179,6 +191,10 @@ export class AnthropicDirectProvider {
                           },
                         };
                         controller.enqueue(finishPart);
+                        controller.close();
+                        return;
+                      } else {
+                        logger.info('Unknown event type:', parsed.type);
                       }
                     } catch (parseError) {
                       logger.warn('Failed to parse streaming data:', parseError);
