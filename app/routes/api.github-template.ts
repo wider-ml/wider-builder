@@ -210,8 +210,10 @@ export async function loader({ request, context }: { request: Request; context: 
   }
 
   try {
-    // Access environment variables from Cloudflare context or process.env
-    // For Remix apps, use server-side environment variables (without VITE_ prefix)
+    /*
+     * Access environment variables from Cloudflare context or process.env
+     * For Remix apps, use server-side environment variables (without VITE_ prefix)
+     */
     const githubToken =
       context?.cloudflare?.env?.GITHUB_TOKEN ||
       context?.cloudflare?.env?.VITE_GITHUB_ACCESS_TOKEN ||

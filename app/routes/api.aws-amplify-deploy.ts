@@ -283,6 +283,7 @@ export async function action({ request }: ActionFunctionArgs) {
     } else {
       // Get existing app info
       console.log(`Using existing Amplify app ID: ${targetAppId}`);
+
       try {
         const getAppCommand = new GetAppCommand({ appId: targetAppId });
         const getAppResponse = await amplifyClient.send(getAppCommand);
@@ -323,8 +324,11 @@ export async function action({ request }: ActionFunctionArgs) {
         await amplifyClient.send(getBranchCommand);
         console.log('Main branch already exists');
       } catch (branchError) {
+        console.log(branchError);
+
         // Branch doesn't exist, create it
         console.log('Creating main branch...');
+
         const createBranchCommand = new CreateBranchCommand({
           appId: targetAppId,
           branchName: 'main',
@@ -337,6 +341,7 @@ export async function action({ request }: ActionFunctionArgs) {
       }
     } catch (error) {
       console.error('Error managing branch:', error);
+
       // Continue with deployment even if branch management fails
     }
 
@@ -349,6 +354,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
       // Create fileMap with MD5 hashes
       const fileMap: Record<string, string> = {};
+
       for (const [filePath, content] of Object.entries(filesToDeploy)) {
         const normalizedPath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
         const md5Hash = crypto.createHash('md5').update(content, 'utf8').digest('hex');
@@ -377,6 +383,7 @@ export async function action({ request }: ActionFunctionArgs) {
       if (uploadUrls) {
         for (const [filePath, uploadUrl] of Object.entries(uploadUrls)) {
           const fileContent = filesToDeploy[filePath] || filesToDeploy[`/${filePath}`];
+
           if (fileContent) {
             try {
               const response = await fetch(uploadUrl, {
@@ -445,6 +452,7 @@ export async function action({ request }: ActionFunctionArgs) {
         }
       } catch (domainError) {
         console.warn('Failed to create domain association:', domainError);
+
         // Continue without failing the deployment
         domainAssociationStatus = 'FAILED';
       }

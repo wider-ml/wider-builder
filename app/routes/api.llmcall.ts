@@ -18,7 +18,7 @@ async function getModelList(options: {
   providerSettings?: Record<string, IProviderSetting>;
   serverEnv?: Record<string, string>;
 }) {
-  const llmManager = LLMManager.getInstance(import.meta.env);
+  const llmManager = LLMManager.getInstance(process.env as Record<string, string>);
   return llmManager.updateModelList(options);
 }
 
@@ -94,7 +94,12 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
     }
   } else {
     try {
-      const models = await getModelList({ apiKeys, providerSettings, serverEnv: context.cloudflare?.env as any });
+      const models = await getModelList({
+        apiKeys,
+        providerSettings,
+        serverEnv:
+          (context.cloudflare?.env as unknown as Record<string, string>) || (process.env as Record<string, string>),
+      });
       const modelDetails = models.find((m: ModelInfo) => m.name === model);
 
       if (!modelDetails) {
@@ -121,7 +126,8 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
         ],
         model: providerInfo.getModelInstance({
           model: modelDetails.name,
-          serverEnv: context.cloudflare?.env as any,
+          serverEnv:
+            (context.cloudflare?.env as unknown as Record<string, string>) || (process.env as Record<string, string>),
           apiKeys,
           providerSettings,
         }),

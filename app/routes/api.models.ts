@@ -51,7 +51,7 @@ export async function loader({
     };
   };
 }): Promise<Response> {
-  const llmManager = LLMManager.getInstance(context.cloudflare?.env);
+  const llmManager = LLMManager.getInstance(process.env as any);
 
   // Get client side maintained API keys and provider settings from cookies
   const cookieHeader = request.headers.get('Cookie');
@@ -62,6 +62,9 @@ export async function loader({
 
   let modelList: ModelInfo[] = [];
 
+  // Use process.env for Node.js environment, fallback to Cloudflare env
+  const serverEnv = context.cloudflare?.env || (process.env as Record<string, string>);
+
   if (params.provider) {
     // Only update models for the specific provider
     const provider = llmManager.getProvider(params.provider);
@@ -70,7 +73,7 @@ export async function loader({
       modelList = await llmManager.getModelListFromProvider(provider, {
         apiKeys,
         providerSettings,
-        serverEnv: context.cloudflare?.env,
+        serverEnv,
       });
     }
   } else {
@@ -78,7 +81,7 @@ export async function loader({
     modelList = await llmManager.updateModelList({
       apiKeys,
       providerSettings,
-      serverEnv: context.cloudflare?.env,
+      serverEnv,
     });
   }
 

@@ -261,14 +261,15 @@ export function useAWSAmplifyDeploy() {
                 status: domainStatus.status,
                 message: domainStatus.message,
                 isReady: domainStatus.isReady,
-                url: domainStatus.url
+                url: domainStatus.url,
               });
-              
+
               const currentDomainAlert = workbenchStore.domainAlert.get();
               console.log(`Current domain alert:`, currentDomainAlert);
-              
+
               if (domainStatus.status === 'AVAILABLE') {
                 console.log(`Domain ${data.domain.customDomain} is AVAILABLE! Updating UI...`);
+
                 const domainAlert: DomainAlert = {
                   type: 'success',
                   title: 'Custom Domain Ready',
@@ -377,16 +378,21 @@ export function useAWSAmplifyDeploy() {
       });
 
       // Continue polling domain status even after deployment completes
-      if (data.domain?.customDomain && domainStatus && domainStatus.status !== 'AVAILABLE' && domainStatus.status !== 'FAILED') {
+      if (
+        data.domain?.customDomain &&
+        domainStatus &&
+        domainStatus.status !== 'AVAILABLE' &&
+        domainStatus.status !== 'FAILED'
+      ) {
         console.log('Deployment completed, but domain is still setting up. Continuing domain status polling...');
-        
+
         const maxDomainAttempts = 20; // 3+ minutes for domain setup
         let domainAttempts = 0;
-        
+
         while (domainAttempts < maxDomainAttempts) {
           try {
             await new Promise((resolve) => setTimeout(resolve, 10000)); // Wait 10 seconds
-            
+
             const domainStatusResponse = await fetch('/api/aws-amplify-status', {
               method: 'POST',
               headers: {
@@ -409,14 +415,17 @@ export function useAWSAmplifyDeploy() {
                   status: currentDomainStatus.status,
                   message: currentDomainStatus.message,
                   isReady: currentDomainStatus.isReady,
-                  url: currentDomainStatus.url
+                  url: currentDomainStatus.url,
                 });
-                
+
                 const currentDomainAlert = workbenchStore.domainAlert.get();
                 console.log(`[Post-deployment polling] Current domain alert:`, currentDomainAlert);
-                
+
                 if (currentDomainStatus.status === 'AVAILABLE') {
-                  console.log(`[Post-deployment polling] Domain ${data.domain.customDomain} is AVAILABLE! Updating UI...`);
+                  console.log(
+                    `[Post-deployment polling] Domain ${data.domain.customDomain} is AVAILABLE! Updating UI...`,
+                  );
+
                   const domainAlert: DomainAlert = {
                     type: 'success',
                     title: 'Custom Domain Ready',
@@ -496,8 +505,14 @@ export function useAWSAmplifyDeploy() {
 
         if (domainAttempts >= maxDomainAttempts) {
           console.log('Domain status polling timed out');
+
           const currentDomainAlert = workbenchStore.domainAlert.get();
-          if (currentDomainAlert && currentDomainAlert.status !== 'AVAILABLE' && currentDomainAlert.status !== 'FAILED') {
+
+          if (
+            currentDomainAlert &&
+            currentDomainAlert.status !== 'AVAILABLE' &&
+            currentDomainAlert.status !== 'FAILED'
+          ) {
             const domainAlert: DomainAlert = {
               type: 'warning',
               title: 'Domain Setup Taking Longer',

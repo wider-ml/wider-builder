@@ -8,9 +8,14 @@ export async function loader() {
     const mcpService = MCPService.getInstance();
     const serverTools = await mcpService.checkServersAvailabilities();
 
-    return Response.json(serverTools);
+    return new Response(JSON.stringify(serverTools), {
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     logger.error('Error checking MCP servers:', error);
-    return Response.json({ error: 'Failed to check MCP servers' }, { status: 500 });
+    return new Response(JSON.stringify({ error: 'Failed to check MCP servers' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 }

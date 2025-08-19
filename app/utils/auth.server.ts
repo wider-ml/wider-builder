@@ -60,21 +60,14 @@ export function extractUserIdFromRequest(request: Request): string {
 }
 
 export async function requireAuth(request: Request) {
-  const access =
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzU2MDk3MDYzLCJpYXQiOjE3NTU0OTIyNjMsImp0aSI6IjZmY2JlZDQyOGNiZDQ1Y2Q5NThiZjg0NzY5Zjg2YjljIiwidXNlcl9pZCI6IjAzYzk2ZTFhLTljMjctNGJlNC05ZTkxLTBlYTU5NTQwN2MzOCIsImhhc2hfcGFzc3dvcmQiOiI1Rjg1MDA2NEE1NThEMDE4ODY3QzM1QjgzMjU1QjkwMCJ9.unvBSaLoBqEof1KOT5KEOSEQQyWVtWGIT9Prux2UyZY';
-  const refresh =
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc1ODA4NDI2MywiaWF0IjoxNzU1NDkyMjYzLCJqdGkiOiIyOGRiNTgyMGNjZGM0MjgwOWM3OGM5ZDFhMmVkZjI1NCIsInVzZXJfaWQiOiIwM2M5NmUxYS05YzI3LTRiZTQtOWU5MS0wZWE1OTU0MDdjMzgiLCJoYXNoX3Bhc3N3b3JkIjoiNUY4NTAwNjRBNTU4RDAxODg2N0MzNUI4MzI1NUI5MDAifQ.4l8I3EuEQziFb5c7F0kC6AyKrFhqfMIIBdGg5VOMcqM';
-
   const cookies = parseCookies(request.headers.get('Cookie'));
-  const accessToken = cookies.wider_shared_access_token || access;
-  const refreshToken = cookies.wider_shared_refresh_token || refresh;
+  const accessToken = cookies.wider_shared_access_token;
+  const refreshToken = cookies.wider_shared_refresh_token;
 
-  /*
-   * if (!accessToken) {
-   *   const URL = process.env.WIDER_APP_URL || 'https://dev.widerml.com';
-   *   throw redirect(`${URL}/en/auth/sign-in?next=builder.widerml.com`); // redirect if no token
-   * }
-   */
+  if (!accessToken) {
+    const URL = process.env.WIDER_APP_URL || 'https://dev.widerml.com';
+    throw redirect(`${URL}/en/auth/sign-in?next=builder.widerml.com`); // redirect if no token
+  }
 
   // Optional: verify token with your backend API
 
