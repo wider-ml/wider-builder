@@ -7,14 +7,19 @@ export const loader: LoaderFunction = async ({ context, request }) => {
   const provider = url.searchParams.get('provider');
 
   if (!provider) {
-    return Response.json({ isSet: false });
+    return new Response(JSON.stringify({ isSet: false }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
-  const llmManager = LLMManager.getInstance(context?.cloudflare?.env as any);
+  // Initialize LLMManager with process.env for Node.js environment
+  const llmManager = LLMManager.getInstance(process.env as any);
   const providerInstance = llmManager.getProvider(provider);
 
   if (!providerInstance || !providerInstance.config.apiTokenKey) {
-    return Response.json({ isSet: false });
+    return new Response(JSON.stringify({ isSet: false }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   const envVarName = providerInstance.config.apiTokenKey;
@@ -26,16 +31,18 @@ export const loader: LoaderFunction = async ({ context, request }) => {
   /*
    * Check API key in order of precedence:
    * 1. Client-side API keys (from cookies)
-   * 2. Server environment variables (from Cloudflare env)
-   * 3. Process environment variables (from .env.local)
+   * 2. Process environment variables (Node.js environment)
+   * 3. Server environment variables (from Cloudflare env - fallback)
    * 4. LLMManager environment variables
    */
   const isSet = !!(
     apiKeys?.[provider] ||
-    (context?.cloudflare?.env as Record<string, any>)?.[envVarName] ||
     process.env[envVarName] ||
+    (context?.cloudflare?.env as Record<string, any>)?.[envVarName] ||
     llmManager.env[envVarName]
   );
 
-  return Response.json({ isSet });
+  return new Response(JSON.stringify({ isSet }), {
+    headers: { 'Content-Type': 'application/json' },
+  });
 };

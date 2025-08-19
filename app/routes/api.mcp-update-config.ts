@@ -9,15 +9,23 @@ export async function action({ request }: ActionFunctionArgs) {
     const mcpConfig = (await request.json()) as MCPConfig;
 
     if (!mcpConfig || typeof mcpConfig !== 'object') {
-      return Response.json({ error: 'Invalid MCP servers configuration' }, { status: 400 });
+      return new Response(JSON.stringify({ error: 'Invalid MCP servers configuration' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     const mcpService = MCPService.getInstance();
     const serverTools = await mcpService.updateConfig(mcpConfig);
 
-    return Response.json(serverTools);
+    return new Response(JSON.stringify(serverTools), {
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     logger.error('Error updating MCP config:', error);
-    return Response.json({ error: 'Failed to update MCP config' }, { status: 500 });
+    return new Response(JSON.stringify({ error: 'Failed to update MCP config' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 }

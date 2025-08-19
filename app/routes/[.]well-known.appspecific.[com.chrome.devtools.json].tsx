@@ -15,5 +15,7 @@ export const loader = async ({}: LoaderFunctionArgs) => {
     },
   };
 
-  return Response.json(jsonData);
+  return new Response(JSON.stringify(jsonData), {
+    headers: { 'Content-Type': 'application/json' },
+  });
 };
