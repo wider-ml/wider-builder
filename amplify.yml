@@ -8,13 +8,18 @@ frontend:
         - export AWS_ACCESS_KEY_ID=$CUSTOM_AWS_ACCESS_KEY_ID
         - export AWS_SECRET_ACCESS_KEY=$CUSTOM_AWS_SECRET_ACCESS_KEY
         - export AWS_REGION=$CUSTOM_AWS_REGION
+        - export NODE_OPTIONS="--max-old-space-size=4096"
     build:
       commands:
-        - export NODE_OPTIONS="--max-old-space-size=4096"
         - pnpm install
         - pnpm run build
+        # Create index.html that redirects to the Remix app
+        - mkdir -p build/client
+        - echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Remix App</title><script>window.location.replace("/");</script></head><body><p>Redirecting to Remix app...</p></body></html>' > build/client/index.html
+        # Copy server build for Lambda deployment
+        - cp -r build/server/* build/client/
   artifacts:
-    baseDirectory: build
+    baseDirectory: build/client
     files:
       - '**/*'
   cache:
