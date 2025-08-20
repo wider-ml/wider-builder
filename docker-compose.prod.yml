@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  wider-builder-prod:
+    build:
+      context: .
+      target: bolt-ai-production
+      args:
+        - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+        - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+        - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+        - AWS_REGION=${AWS_REGION:-eu-west-2}
+        - GITHUB_TOKEN=${GITHUB_TOKEN}
+        - VITE_GITHUB_ACCESS_TOKEN=${VITE_GITHUB_ACCESS_TOKEN}
+        - VITE_GITHUB_TOKEN_TYPE=${VITE_GITHUB_TOKEN_TYPE:-classic}
+        - MONGODB_CONNECTION_STRING=${MONGODB_CONNECTION_STRING}
+        - AWS_AMPLIFY_BUCKET=${AWS_AMPLIFY_BUCKET:-wider-ai-websites}
+    ports:
+      - '5173:5173'
+    environment:
+      - NODE_ENV=production
+      - RUNNING_IN_DOCKER=true
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION:-eu-west-2}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - VITE_GITHUB_ACCESS_TOKEN=${VITE_GITHUB_ACCESS_TOKEN}
+      - VITE_GITHUB_TOKEN_TYPE=${VITE_GITHUB_TOKEN_TYPE:-classic}
+      - MONGODB_CONNECTION_STRING=${MONGODB_CONNECTION_STRING}
+      - AWS_AMPLIFY_BUCKET=${AWS_AMPLIFY_BUCKET:-wider-ai-websites}
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:5173/api/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - wider-network
+
+networks:
+  wider-network:
+    driver: bridge
