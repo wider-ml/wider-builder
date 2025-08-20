@@ -3,14 +3,14 @@ frontend:
   phases:
     preBuild:
       commands:
-        - npm ci
+        - npm install -g pnpm
         # Map custom environment variables to standard AWS names
         - export AWS_ACCESS_KEY_ID=$CUSTOM_AWS_ACCESS_KEY_ID
         - export AWS_SECRET_ACCESS_KEY=$CUSTOM_AWS_SECRET_ACCESS_KEY
         - export AWS_REGION=$CUSTOM_AWS_REGION
     build:
       commands:
-        - npm install -g pnpm
+        - export NODE_OPTIONS="--max-old-space-size=4096"
         - pnpm install
         - pnpm run build
   artifacts:
@@ -20,6 +20,7 @@ frontend:
   cache:
     paths:
       - node_modules/**/*
+      - ~/.pnpm-store/**/*
   customHeaders:
     - pattern: '**/*'
       headers:
