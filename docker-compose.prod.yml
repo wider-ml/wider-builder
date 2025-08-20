@@ -1,6 +1,20 @@
-version: '3.8'
-
 services:
+  mongodb:
+    image: mongo:7.0
+    container_name: wider-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: wider123
+      MONGO_INITDB_DATABASE: wider-builder
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - wider-network
+
   wider-builder-prod:
     build:
       context: .
@@ -10,13 +24,17 @@ services:
         - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
         - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
         - AWS_REGION=${AWS_REGION:-eu-west-2}
-        - GITHUB_TOKEN=${GITHUB_TOKEN}
-        - VITE_GITHUB_ACCESS_TOKEN=${VITE_GITHUB_ACCESS_TOKEN}
-        - VITE_GITHUB_TOKEN_TYPE=${VITE_GITHUB_TOKEN_TYPE:-classic}
-        - MONGODB_CONNECTION_STRING=${MONGODB_CONNECTION_STRING}
         - AWS_AMPLIFY_BUCKET=${AWS_AMPLIFY_BUCKET:-wider-ai-websites}
+        - GITHUB_TOKEN=${GITHUB_TOKEN}
+        - MONGODB_CONNECTION_STRING=${MONGODB_CONNECTION_STRING}
+        - MONGODB_URI=${MONGODB_URI}
+        - VITE_LOG_LEVEL=${VITE_LOG_LEVEL:-error}
     ports:
       - '5173:5173'
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+      - 1.1.1.1
     environment:
       - NODE_ENV=production
       - RUNNING_IN_DOCKER=true
@@ -24,11 +42,17 @@ services:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - AWS_REGION=${AWS_REGION:-eu-west-2}
+      - AWS_AMPLIFY_BUCKET=${AWS_AMPLIFY_BUCKET:-wider-ai-websites}
       - GITHUB_TOKEN=${GITHUB_TOKEN}
       - VITE_GITHUB_ACCESS_TOKEN=${VITE_GITHUB_ACCESS_TOKEN}
       - VITE_GITHUB_TOKEN_TYPE=${VITE_GITHUB_TOKEN_TYPE:-classic}
       - MONGODB_CONNECTION_STRING=${MONGODB_CONNECTION_STRING}
-      - AWS_AMPLIFY_BUCKET=${AWS_AMPLIFY_BUCKET:-wider-ai-websites}
+      - MONGODB_URI=${MONGODB_URI}
+      - API_AUTH_URL=${API_AUTH_URL:-http://localhost:5173}
+      - API_ROOT_URL=${API_ROOT_URL:-http://localhost:5173}
+      - WIDER_APP_URL=${WIDER_APP_URL:-http://localhost:5173}
+      - OWN_APP_URL=${OWN_APP_URL:-http://localhost:5173}
+      - VITE_LOG_LEVEL=${VITE_LOG_LEVEL:-error}
     restart: unless-stopped
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:5173/api/health']
@@ -36,9 +60,14 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+    depends_on:
+      - mongodb
     networks:
       - wider-network
 
 networks:
   wider-network:
     driver: bridge
+
+volumes:
+  mongodb_data:

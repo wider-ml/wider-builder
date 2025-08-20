@@ -115,6 +115,7 @@ build_image() {
         --build-arg VITE_GITHUB_ACCESS_TOKEN="${VITE_GITHUB_ACCESS_TOKEN:-$GITHUB_TOKEN}" \
         --build-arg VITE_GITHUB_TOKEN_TYPE="${VITE_GITHUB_TOKEN_TYPE:-classic}" \
         --build-arg MONGODB_CONNECTION_STRING="$MONGODB_CONNECTION_STRING" \
+        --build-arg MONGODB_URI="$MONGODB_URI" \
         --build-arg AWS_AMPLIFY_BUCKET="${AWS_AMPLIFY_BUCKET:-wider-ai-websites}" \
         --build-arg VITE_LOG_LEVEL="${VITE_LOG_LEVEL:-error}" \
         -t $IMAGE_NAME .
@@ -139,6 +140,7 @@ run_container() {
         -e VITE_GITHUB_ACCESS_TOKEN="${VITE_GITHUB_ACCESS_TOKEN:-$GITHUB_TOKEN}" \
         -e VITE_GITHUB_TOKEN_TYPE="${VITE_GITHUB_TOKEN_TYPE:-classic}" \
         -e MONGODB_CONNECTION_STRING="$MONGODB_CONNECTION_STRING" \
+        -e MONGODB_URI="$MONGODB_URI" \
         -e AWS_AMPLIFY_BUCKET="${AWS_AMPLIFY_BUCKET:-wider-ai-websites}" \
         -e VITE_LOG_LEVEL="${VITE_LOG_LEVEL:-error}" \
         --restart unless-stopped \

@@ -18,4 +18,18 @@ interface Env {
   XAI_API_KEY: string;
   PERPLEXITY_API_KEY: string;
   AWS_BEDROCK_CONFIG: string;
+  AWS_ACCESS_KEY_ID: string;
+  AWS_SECRET_ACCESS_KEY: string;
+  AWS_REGION: string;
+  AWS_AMPLIFY_BUCKET: string;
+  GITHUB_TOKEN: string;
+  VITE_GITHUB_ACCESS_TOKEN: string;
+  VITE_GITHUB_TOKEN_TYPE: string;
+  MONGODB_URI: string;
+  MONGODB_CONNECTION_STRING: string;
+  API_AUTH_URL: string;
+  API_ROOT_URL: string;
+  WIDER_APP_URL: string;
+  OWN_APP_URL: string;
+  VITE_LOG_LEVEL: string;
 }
