@@ -26,8 +26,12 @@ services:
         - AWS_REGION=${AWS_REGION:-eu-west-2}
         - AWS_AMPLIFY_BUCKET=${AWS_AMPLIFY_BUCKET:-wider-ai-websites}
         - GITHUB_TOKEN=${GITHUB_TOKEN}
+        - VITE_GITHUB_ACCESS_TOKEN=${VITE_GITHUB_ACCESS_TOKEN}
+        - VITE_GITHUB_TOKEN_TYPE=${VITE_GITHUB_TOKEN_TYPE:-classic}
         - MONGODB_CONNECTION_STRING=${MONGODB_CONNECTION_STRING}
         - MONGODB_URI=${MONGODB_URI}
+        - API_ROOT_URL=${API_ROOT_URL:-http://localhost:5173}
+        - WIDER_APP_URL=${WIDER_APP_URL:-http://localhost:5173}
         - VITE_LOG_LEVEL=${VITE_LOG_LEVEL:-error}
     ports:
       - '5173:5173'
