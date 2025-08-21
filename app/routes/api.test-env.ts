@@ -7,6 +7,8 @@ export async function loader() {
     console.log('AWS_ACCESS_KEY_ID:', process.env.AWS_ACCESS_KEY_ID);
     console.log('AWS_SECRET_ACCESS_KEY:', process.env.AWS_SECRET_ACCESS_KEY ? 'PRESENT' : 'MISSING');
     console.log('AWS_REGION:', process.env.AWS_REGION);
+    console.log('API_ROOT_URL:', process.env.API_ROOT_URL);
+    console.log('WIDER_APP_URL:', process.env.WIDER_APP_URL);
     console.log('All env keys count:', Object.keys(process.env).length);
     console.log(
       'All AWS keys:',
@@ -20,6 +22,8 @@ export async function loader() {
       awsAccessKeyId: process.env.AWS_ACCESS_KEY_ID,
       awsSecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ? 'PRESENT' : 'MISSING',
       awsRegion: process.env.AWS_REGION,
+      apiRootUrl: process.env.API_ROOT_URL,
+      widerAppUrl: process.env.WIDER_APP_URL,
       allEnvKeysCount: Object.keys(process.env).length,
       awsKeys: Object.keys(process.env).filter((k) => k.includes('AWS')),
       processPid: process.pid,

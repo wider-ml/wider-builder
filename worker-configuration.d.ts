@@ -27,9 +27,7 @@ interface Env {
   VITE_GITHUB_TOKEN_TYPE: string;
   MONGODB_URI: string;
   MONGODB_CONNECTION_STRING: string;
-  API_AUTH_URL: string;
   API_ROOT_URL: string;
   WIDER_APP_URL: string;
-  OWN_APP_URL: string;
   VITE_LOG_LEVEL: string;
 }
