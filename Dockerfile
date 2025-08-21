@@ -6,6 +6,8 @@ WORKDIR /app
 # Install dependencies (this step is cached as long as the dependencies don't change)
 COPY package.json pnpm-lock.yaml ./
 
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
 #RUN npm install -g corepack@latest
 
 #RUN corepack enable pnpm && pnpm install
