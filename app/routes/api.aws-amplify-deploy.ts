@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import { type ActionFunctionArgs, json } from '@remix-run/cloudflare';
 import {
   AmplifyClient,
