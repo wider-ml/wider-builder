@@ -4,6 +4,9 @@
 FROM node:20.18.0 AS builder
 WORKDIR /app
 
+# Set Node.js memory options to prevent heap out of memory
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
 # Install pnpm globally
 RUN npm install -g pnpm
 
@@ -19,7 +22,7 @@ RUN pnpm install --frozen-lockfile
 # Copy source code
 COPY . .
 
-# Build Remix
+# Build Remix with increased memory
 RUN pnpm run build
 
 # -------------------------
@@ -50,4 +53,3 @@ EXPOSE 5173
 
 # Start Remix server
 CMD ["pnpm", "run", "start:prod"]
-    
