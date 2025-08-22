@@ -273,6 +273,17 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
 
             result.mergeIntoDataStream(dataStream);
 
+            (async () => {
+              for await (const part of result.fullStream) {
+                if (part.type === 'error') {
+                  const error: any = part.error;
+                  logger.error(`${error}`);
+
+                  return;
+                }
+              }
+            })();
+
             return;
           },
         };
@@ -285,70 +296,35 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
           message: 'Generating Response',
         } satisfies ProgressAnnotation);
 
-        try {
-          const result = await streamText({
-            messages: [...processedMessages],
-            env: context.cloudflare?.env,
-            options,
-            apiKeys,
-            files,
-            providerSettings,
-            promptId,
-            contextOptimization,
-            contextFiles: filteredFiles,
-            chatMode,
-            designScheme,
-            summary,
-            messageSliceId,
-          });
+        const result = await streamText({
+          messages: [...processedMessages],
+          env: context.cloudflare?.env,
+          options,
+          apiKeys,
+          files,
+          providerSettings,
+          promptId,
+          contextOptimization,
+          contextFiles: filteredFiles,
+          chatMode,
+          designScheme,
+          summary,
+          messageSliceId,
+        });
 
-          if (!result || !result.fullStream) {
-            logger.error('Invalid response from AI API', { result });
-            throw new Error('Invalid response from AI API');
-          }
+        (async () => {
+          for await (const part of result.fullStream) {
+            if (part.type === 'error') {
+              const error: any = part.error;
+              logger.error(`${error}`);
 
-          // Production-specific safety wrapper for mergeIntoDataStream
-          if (process.env.NODE_ENV === 'production') {
-            try {
-              result.mergeIntoDataStream(dataStream);
-            } catch (mergeError: any) {
-              logger.error('Error during stream merge in production:', mergeError);
-
-              // If merge fails, try to handle gracefully
-              if (mergeError.message?.includes('Failed to process successful response')) {
-                logger.warn('Stream merge failed, attempting graceful fallback');
-
-                // Write a simple completion message instead of streaming
-                dataStream.writeData({
-                  type: 'progress',
-                  label: 'response',
-                  status: 'complete',
-                  order: progressCounter++,
-                  message: 'Response completed with fallback handling',
-                } satisfies ProgressAnnotation);
-
-                return; // Exit gracefully
-              }
-
-              throw mergeError; // Re-throw if it's not the known error
+              return;
             }
-          } else {
-            result.mergeIntoDataStream(dataStream);
           }
-        } catch (error: any) {
-          logger.error('Error during AI API call:', {
-            message: error.message,
-            stack: error.stack,
-            response: error.response || null,
-          });
-          throw error; // Re-throw the error to be handled by the outer catch block
-        }
+        })();
+        result.mergeIntoDataStream(dataStream);
       },
-      onError: (error: any) => {
-        logger.error('DataStream onError triggered:', error);
-        // Don't return a custom error message, let it bubble up
-        throw error;
-      },
+      onError: (error: any) => `Custom error: ${error.message}`,
     }).pipeThrough(
       new TransformStream({
         transform: (chunk, controller) => {

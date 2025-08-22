@@ -3,7 +3,6 @@ import type { ModelInfo } from '~/lib/modules/llm/types';
 import type { LanguageModelV1 } from 'ai';
 import type { IProviderSetting } from '~/types/model';
 import { createAnthropic } from '@ai-sdk/anthropic';
-import { AnthropicDirectProvider } from './anthropic-direct';
 
 export default class AnthropicProvider extends BaseProvider {
   name = 'Anthropic';
@@ -94,16 +93,9 @@ export default class AnthropicProvider extends BaseProvider {
       defaultBaseUrlKey: '',
       defaultApiTokenKey: 'ANTHROPIC_API_KEY',
     });
-
-    // In production, use the direct provider to bypass AI SDK issues
-    if (process.env.NODE_ENV === 'production') {
-      const directProvider = new AnthropicDirectProvider(apiKey);
-      return directProvider.getModelInstance(model);
-    }
-
-    // In development, use the standard AI SDK
     const anthropic = createAnthropic({
       apiKey,
+      headers: { 'anthropic-beta': 'output-128k-2025-02-19' },
     });
 
     return anthropic(model);
