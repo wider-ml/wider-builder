@@ -1,0 +1,60 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm install -g pnpm
+        # Map custom environment variables to standard AWS names
+        - export AWS_ACCESS_KEY_ID=$CUSTOM_AWS_ACCESS_KEY_ID
+        - export AWS_SECRET_ACCESS_KEY=$CUSTOM_AWS_SECRET_ACCESS_KEY
+        - export AWS_REGION=$CUSTOM_AWS_REGION
+        - export NODE_OPTIONS="--max-old-space-size=4096"
+    build:
+      commands:
+        - pnpm install
+        - pnpm run build
+        # Create index.html that redirects to the Remix app
+        - mkdir -p build/client
+        - echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Remix App</title><script>window.location.replace("/");</script></head><body><p>Redirecting to Remix app...</p></body></html>' > build/client/index.html
+        # Copy server build for Lambda deployment
+        - cp -r build/server/* build/client/
+  artifacts:
+    baseDirectory: build/client
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+      - ~/.pnpm-store/**/*
+  customHeaders:
+    - pattern: '**/*'
+      headers:
+        - key: 'Strict-Transport-Security'
+          value: 'max-age=31536000; includeSubDomains'
+        - key: 'X-Content-Type-Options'
+          value: 'nosniff'
+        - key: 'X-Frame-Options'
+          value: 'DENY'
+        - key: 'X-XSS-Protection'
+          value: '1; mode=block'
+        - key: 'Referrer-Policy'
+          value: 'strict-origin-when-cross-origin'
+        - key: 'Content-Security-Policy'
+          value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https: wss:;"
+  environmentVariables:
+    NODE_ENV: production
+    # Custom AWS variables (Amplify compatible)
+    CUSTOM_AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+    CUSTOM_AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+    CUSTOM_AWS_REGION: $AWS_REGION
+    AWS_AMPLIFY_BUCKET: $AWS_AMPLIFY_BUCKET
+    # API Keys
+    ANTHROPIC_API_KEY: $ANTHROPIC_API_KEY
+    # GitHub
+    GITHUB_TOKEN: $GITHUB_TOKEN
+    VITE_GITHUB_ACCESS_TOKEN: $VITE_GITHUB_ACCESS_TOKEN
+    VITE_GITHUB_TOKEN_TYPE: $VITE_GITHUB_TOKEN_TYPE
+    # Debug
+    VITE_LOG_LEVEL: $VITE_LOG_LEVEL
+    # Database
+    MONGODB_CONNECTION_STRING: $MONGODB_CONNECTION_STRING
