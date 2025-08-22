@@ -32,11 +32,11 @@ function getMongoDBURI(context?: { cloudflare?: { env: Record<string, string> } 
       const envLines = envOutput.split('\n');
       for (const line of envLines) {
         if (line.startsWith('MONGODB_URI=')) {
-          mongodbUri = line.split('=')[1];
+          mongodbUri = line.substring('MONGODB_URI='.length);
           console.log('Found MONGODB_URI via execSync:', mongodbUri ? 'Yes' : 'No');
           break;
         } else if (line.startsWith('MONGODB_CONNECTION_STRING=')) {
-          mongodbUri = line.split('=')[1];
+          mongodbUri = line.substring('MONGODB_CONNECTION_STRING='.length);
           console.log('Found MONGODB_CONNECTION_STRING via execSync:', mongodbUri ? 'Yes' : 'No');
           break;
         }

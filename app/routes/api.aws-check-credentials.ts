@@ -8,6 +8,12 @@ export async function loader() {
     let secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
     let region = process.env.AWS_REGION || 'us-east-1';
 
+    console.log('Initial AWS Env Vars:', {
+      accessKeyId: accessKeyId ? `${accessKeyId.substring(0, 8)}...` : 'undefined',
+      secretAccessKey: secretAccessKey ? `${secretAccessKey.substring(0, 8)}...` : 'undefined',
+      region,
+    });
+
     // If process.env doesn't work, try using child process to get env vars
     if (!accessKeyId || !secretAccessKey) {
       try {
