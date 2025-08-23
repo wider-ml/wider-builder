@@ -195,9 +195,6 @@ export async function streamText(props: {
 
   // console.log(systemPrompt, processedMessages);
 
-  // Production-specific error handling for AI SDK issues
-  const isProduction = process.env.NODE_ENV === 'production';
-
   try {
     const streamOptions = {
       model: provider.getModelInstance({
@@ -212,56 +209,9 @@ export async function streamText(props: {
       ...options,
     };
 
-    // In production, use more conservative settings to avoid AI SDK processing issues
-    if (isProduction) {
-      // Remove potentially problematic options that might cause processing errors
-      const { experimental_telemetry, experimental_providerMetadata, ...safeOptions } = streamOptions;
-
-      return await _streamText({
-        ...safeOptions,
-        // Use more conservative settings for production
-        maxSteps: Math.min(options?.maxSteps || 5, 3), // Limit steps to reduce complexity
-        experimental_continueSteps: false, // Disable experimental features
-      });
-    }
-
     return await _streamText(streamOptions);
   } catch (error: any) {
     logger.error(`Error in streamText for ${provider.name}:`, error);
-
-    // Handle the specific "Failed to process successful response" error
-    if (error.message?.includes('Failed to process successful response')) {
-      logger.warn('Attempting production-specific workaround for AI SDK processing error');
-
-      try {
-        // Ultra-conservative retry with minimal options
-        const fallbackResult = await _streamText({
-          model: provider.getModelInstance({
-            model: modelDetails.name,
-            serverEnv,
-            apiKeys,
-            providerSettings,
-          }),
-          system: chatMode === 'build' ? systemPrompt : discussPrompt(),
-          maxTokens: Math.min(dynamicMaxTokens, 4000), // Reduce token limit
-          messages: convertToCoreMessages(processedMessages as any),
-          // Minimal options to avoid processing issues
-          maxSteps: 1,
-          toolChoice: 'none', // Disable tools to simplify processing
-        });
-
-        logger.info('Production workaround successful');
-        return fallbackResult;
-      } catch (retryError: any) {
-        logger.error('Production workaround also failed:', retryError);
-
-        // Last resort: throw a more user-friendly error
-        throw new Error(
-          `AI service temporarily unavailable in production environment. Please try again in a few moments. (${error.message})`,
-        );
-      }
-    }
-
     throw error;
   }
 }
