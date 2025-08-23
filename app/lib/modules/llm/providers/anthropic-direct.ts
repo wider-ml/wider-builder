@@ -34,18 +34,9 @@ export class AnthropicDirectProvider {
     return {
       ...baseModel,
       doStream: async (options: LanguageModelV1CallOptions) => {
-        try {
-          logger.info(`Starting production-safe stream for model ${modelName}`);
-          return await baseModel.doStream(options);
-        } catch (error: any) {
-          if (error.message?.includes('Failed to process successful response')) {
-            logger.warn('AI SDK processing error detected, attempting direct API fallback');
-
-            // Fallback to direct Anthropic API call
-            return this.directAnthropicStream(options, modelName);
-          }
-          throw error;
-        }
+        // Always use direct streaming in production to avoid AI SDK processing issues
+        logger.info(`Using direct streaming for model ${modelName} in production`);
+        return this.directAnthropicStream(options, modelName);
       },
       doGenerate: async (options: LanguageModelV1CallOptions) => {
         try {
@@ -140,11 +131,20 @@ export class AnthropicDirectProvider {
           async start(controller) {
             try {
               let buffer = '';
+              let hasStarted = false;
 
               while (true) {
                 const { done, value } = await reader.read();
 
                 if (done) {
+                  if (!hasStarted) {
+                    // If we never started, send a finish event
+                    controller.enqueue({
+                      type: 'finish',
+                      finishReason: 'stop',
+                      usage: { promptTokens: 0, completionTokens: 0 },
+                    } as LanguageModelV1StreamPart);
+                  }
                   controller.close();
                   break;
                 }
@@ -155,7 +155,7 @@ export class AnthropicDirectProvider {
 
                 for (const line of lines) {
                   if (line.startsWith('data: ')) {
-                    const data = line.slice(6);
+                    const data = line.slice(6).trim();
                     if (data === '[DONE]') {
                       controller.close();
                       return;
@@ -166,22 +166,23 @@ export class AnthropicDirectProvider {
 
                       // Handle different Anthropic streaming event types
                       if (parsed.type === 'message_start') {
-                        logger.info('Message started');
+                        hasStarted = true;
+                        logger.debug('Message started');
                       } else if (parsed.type === 'content_block_start') {
-                        logger.info('Content block started');
+                        logger.debug('Content block started');
                       } else if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+                        hasStarted = true;
                         const streamPart: LanguageModelV1StreamPart = {
                           type: 'text-delta',
                           textDelta: parsed.delta.text,
                         };
                         controller.enqueue(streamPart);
                       } else if (parsed.type === 'content_block_stop') {
-                        logger.info('Content block stopped');
+                        logger.debug('Content block stopped');
                       } else if (parsed.type === 'message_delta') {
-                        // Handle message delta events
-                        logger.info('Message delta received');
+                        logger.debug('Message delta received');
                       } else if (parsed.type === 'message_stop') {
-                        logger.info('Message stopped, finishing stream');
+                        logger.debug('Message stopped, finishing stream');
                         const finishPart: LanguageModelV1StreamPart = {
                           type: 'finish',
                           finishReason: 'stop',
@@ -193,11 +194,9 @@ export class AnthropicDirectProvider {
                         controller.enqueue(finishPart);
                         controller.close();
                         return;
-                      } else {
-                        logger.info('Unknown event type:', parsed.type);
                       }
                     } catch (parseError) {
-                      logger.warn('Failed to parse streaming data:', parseError);
+                      logger.warn('Failed to parse streaming data:', parseError, 'Raw data:', data);
                     }
                   }
                 }

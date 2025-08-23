@@ -95,17 +95,19 @@ export default class AnthropicProvider extends BaseProvider {
       defaultApiTokenKey: 'ANTHROPIC_API_KEY',
     });
 
-    // In production, use the direct provider to bypass AI SDK issues
+    // Use the standard AI SDK with production-safe error handling
+    const anthropic = createAnthropic({
+      apiKey,
+    });
+
+    const baseModel = anthropic(model);
+
+    // In production, wrap with error handling but still use AI SDK for proper streaming
     if (process.env.NODE_ENV === 'production') {
       const directProvider = new AnthropicDirectProvider(apiKey);
       return directProvider.getModelInstance(model);
     }
 
-    // In development, use the standard AI SDK
-    const anthropic = createAnthropic({
-      apiKey,
-    });
-
-    return anthropic(model);
+    return baseModel;
   };
 }
