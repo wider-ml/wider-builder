@@ -356,6 +356,16 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
           // Convert the string stream to a byte stream
           const str = typeof transformedChunk === 'string' ? transformedChunk : JSON.stringify(transformedChunk);
           controller.enqueue(encoder.encode(str));
+
+          // Force flush for AWS compatibility - send a small keepalive chunk
+          if (Math.random() < 0.1) {
+            // 10% chance to send keepalive
+            controller.enqueue(encoder.encode('\n'));
+          }
+        },
+        flush: (controller) => {
+          // Final flush when stream ends
+          controller.enqueue(encoder.encode('\n'));
         },
       }),
     );
@@ -365,8 +375,15 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
       headers: {
         'Content-Type': 'text/event-stream; charset=utf-8',
         Connection: 'keep-alive',
-        'Cache-Control': 'no-cache',
-        'Text-Encoding': 'chunked',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        Pragma: 'no-cache',
+        Expires: '0',
+        'Transfer-Encoding': 'chunked',
+        'X-Accel-Buffering': 'no', // Disable nginx buffering
+        'X-Content-Type-Options': 'nosniff',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       },
     });
   } catch (error: any) {

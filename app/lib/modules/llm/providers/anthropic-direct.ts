@@ -27,6 +27,8 @@ export class AnthropicDirectProvider {
       return this.createProductionSafeModel(baseModel, modelName);
     }
 
+    console.log('================Using standard AI SDK model in non-production environment============');
+
     return baseModel;
   }
 
@@ -35,12 +37,12 @@ export class AnthropicDirectProvider {
       ...baseModel,
       doStream: async (options: LanguageModelV1CallOptions) => {
         // Always use direct streaming in production to avoid AI SDK processing issues
-        logger.info(`Using direct streaming for model ${modelName} in production`);
+        console.log(`Using direct streaming for model ${modelName} in production`);
         return this.directAnthropicStream(options, modelName);
       },
       doGenerate: async (options: LanguageModelV1CallOptions) => {
         try {
-          logger.info(`Starting production-safe generate for model ${modelName}`);
+          console.log(`Starting production-safe generate for model ${modelName}`);
           return await baseModel.doGenerate(options);
         } catch (error: any) {
           if (error.message?.includes('Failed to process successful response')) {
@@ -56,7 +58,7 @@ export class AnthropicDirectProvider {
   }
 
   private async directAnthropicStream(options: LanguageModelV1CallOptions, modelName: string) {
-    logger.info('Using direct Anthropic API fallback');
+    console.log('Using direct Anthropic API fallback');
 
     try {
       // Extract messages and system from options (they exist but TypeScript doesn't know)
@@ -81,7 +83,7 @@ export class AnthropicDirectProvider {
         content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content),
       }));
 
-      logger.info('Extracted messages:', JSON.stringify(messages, null, 2));
+      console.log('Extracted messages:', JSON.stringify(messages, null, 2));
 
       const requestBody: any = {
         model: modelName,
@@ -95,7 +97,7 @@ export class AnthropicDirectProvider {
         requestBody.system = system;
       }
 
-      logger.info('Direct API request body:', JSON.stringify(requestBody, null, 2));
+      console.log('Direct API request body:', JSON.stringify(requestBody, null, 2));
 
       // Create a simplified stream that mimics AI SDK structure but bypasses problematic processing
       const response = await fetch('https://api.anthropic.com/v1/messages', {
