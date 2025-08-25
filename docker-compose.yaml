@@ -19,6 +19,7 @@ services:
     image: bolt-ai:development
     build:
       context: .
+      dockerfile: Dockerfile.dev
       target: bolt-ai-development
     ports:
       - '5173:5173'
