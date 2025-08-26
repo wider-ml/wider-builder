@@ -1,12 +1,12 @@
 import { json } from '@remix-run/node';
 import { execSync } from 'child_process';
 
-export async function loader() {
+export async function loader({ request, context }: { request: Request; context: any }) {
   try {
     // Try multiple approaches to get environment variables
-    let accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-    let secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-    let region = process.env.AWS_REGION || 'us-east-1';
+    let accessKeyId = context?.cloudflare?.env?.AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID;
+    let secretAccessKey = context?.cloudflare?.env?.AWS_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY;
+    let region = context?.cloudflare?.env?.AWS_REGION || process.env.AWS_REGION || 'us-east-1';
 
     console.log('Initial AWS Env Vars:', {
       accessKeyId: accessKeyId ? `${accessKeyId.substring(0, 8)}...` : 'undefined',

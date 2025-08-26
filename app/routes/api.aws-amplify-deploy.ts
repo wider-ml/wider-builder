@@ -133,14 +133,14 @@ interface DeployRequestBody {
   framework?: string;
 }
 
-export async function action({ request }: ActionFunctionArgs) {
+export async function action({ request, context }: ActionFunctionArgs) {
   try {
     const { appId, files, sourceFiles, chatId, framework } = (await request.json()) as DeployRequestBody;
 
     // Get AWS credentials from environment variables
-    let accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-    let secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-    let region = process.env.AWS_REGION || 'us-east-1';
+    let accessKeyId = context?.cloudflare?.env?.AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID;
+    let secretAccessKey = context?.cloudflare?.env?.AWS_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY;
+    let region = context?.cloudflare?.env?.AWS_REGION || process.env.AWS_REGION || 'us-east-1';
 
     console.log('AWS Region:', region);
     console.log('AWS Access Key ID:', accessKeyId ? `${accessKeyId.substring(0, 4)}****` : 'undefined');

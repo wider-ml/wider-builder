@@ -9,6 +9,8 @@ function getMongoDBURI(context?: { cloudflare?: { env: Record<string, string> } 
   // Try to get from Wrangler context first (for production)
   const serverEnv = context?.cloudflare?.env || (process.env as Record<string, string>);
 
+  console.log('========== MongoDB Environment Variables ==========', context?.cloudflare?.MONGODB_URI);
+
   let mongodbUri =
     serverEnv.MONGODB_URI ||
     serverEnv.MONGODB_CONNECTION_STRING ||
@@ -49,7 +51,7 @@ function getMongoDBURI(context?: { cloudflare?: { env: Record<string, string> } 
   const finalUri =
     mongodbUri ||
     // Default to local MongoDB for development/production
-    'mongodb://wider-app:wider-app-password@mongodb:27017/wider-builder?authSource=wider-builder';
+    'mongodb://admin:IntInmoLeWDr@localhost:27017/builderDB?authSource=admin';
 
   console.log('Final MongoDB URI:', finalUri);
   return finalUri;

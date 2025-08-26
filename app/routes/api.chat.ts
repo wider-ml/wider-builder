@@ -270,8 +270,20 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
               summary,
               messageSliceId,
             });
+            logger.info(`result1`);
 
             result.mergeIntoDataStream(dataStream);
+
+            (async () => {
+              for await (const part of result.fullStream) {
+                if (part.type === 'error') {
+                  const error: any = part.error;
+                  logger.error(`Error 281 ${error}`);
+
+                  return;
+                }
+              }
+            })();
 
             return;
           },
@@ -285,43 +297,38 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
           message: 'Generating Response',
         } satisfies ProgressAnnotation);
 
-        try {
-          const result = await streamText({
-            messages: [...processedMessages],
-            env: context.cloudflare?.env,
-            options,
-            apiKeys,
-            files,
-            providerSettings,
-            promptId,
-            contextOptimization,
-            contextFiles: filteredFiles,
-            chatMode,
-            designScheme,
-            summary,
-            messageSliceId,
-          });
+        let param = {
+          messages: [...processedMessages],
+          env: context.cloudflare?.env,
+          options,
+          apiKeys,
+          files,
+          providerSettings,
+          promptId,
+          contextOptimization,
+          contextFiles: filteredFiles,
+          chatMode,
+          designScheme,
+          summary,
+          messageSliceId,
+        };
 
-          if (!result || !result.fullStream) {
-            logger.error('Invalid response from AI API', { result });
-            throw new Error('Invalid response from AI API');
+        const result = await streamText(param);
+        logger.info(`result2`);
+
+        (async () => {
+          for await (const part of result.fullStream) {
+            if (part.type === 'error') {
+              const error: any = part.error;
+              logger.error(`Error 321 ${error}`);
+
+              return;
+            }
           }
-
-          result.mergeIntoDataStream(dataStream);
-        } catch (error: any) {
-          logger.error('Error during AI API call:', {
-            message: error.message,
-            stack: error.stack,
-            response: error.response || null,
-          });
-          throw error; // Re-throw the error to be handled by the outer catch block
-        }
+        })();
+        result.mergeIntoDataStream(dataStream);
       },
-      onError: (error: any) => {
-        logger.error('DataStream onError triggered:', error);
-        // Don't return a custom error message, let it bubble up
-        throw error;
-      },
+      onError: (error: any) => `Custom error: ${error.message}`,
     }).pipeThrough(
       new TransformStream({
         transform: (chunk, controller) => {
@@ -356,16 +363,6 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
           // Convert the string stream to a byte stream
           const str = typeof transformedChunk === 'string' ? transformedChunk : JSON.stringify(transformedChunk);
           controller.enqueue(encoder.encode(str));
-
-          // Force flush for AWS compatibility - send a small keepalive chunk
-          if (Math.random() < 0.1) {
-            // 10% chance to send keepalive
-            controller.enqueue(encoder.encode('\n'));
-          }
-        },
-        flush: (controller) => {
-          // Final flush when stream ends
-          controller.enqueue(encoder.encode('\n'));
         },
       }),
     );
@@ -375,19 +372,12 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
       headers: {
         'Content-Type': 'text/event-stream; charset=utf-8',
         Connection: 'keep-alive',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        Pragma: 'no-cache',
-        Expires: '0',
-        'Transfer-Encoding': 'chunked',
-        'X-Accel-Buffering': 'no', // Disable nginx buffering
-        'X-Content-Type-Options': 'nosniff',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Cache-Control': 'no-cache',
+        'Text-Encoding': 'chunked',
       },
     });
   } catch (error: any) {
-    logger.error(error);
+    logger.error(`error 378`, error);
 
     const errorResponse = {
       error: true,

@@ -8,6 +8,7 @@ import * as dotenv from 'dotenv';
 
 // Load environment variables based on NODE_ENV
 const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env';
+console.log(`Loading environment variables from ${envFile}`);
 dotenv.config({ path: envFile });
 
 // Also load the default .env file as fallback

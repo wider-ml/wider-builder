@@ -220,6 +220,15 @@ export async function loader({ request, context }: { request: Request; context: 
       process.env.GITHUB_TOKEN ||
       process.env.VITE_GITHUB_ACCESS_TOKEN;
 
+    console.log(
+      'Github token:',
+      process.env.GITHUB_TOKEN ? `${process.env.GITHUB_TOKEN.substring(0, 8)}...` : 'undefined',
+    );
+    console.log(
+      'Github vite token:',
+      process.env.VITE_GITHUB_ACCESS_TOKEN ? `${process.env.VITE_GITHUB_ACCESS_TOKEN.substring(0, 8)}...` : 'undefined',
+    );
+
     console.log(`Fetching repository: ${repo}`);
     console.log(`Environment: ${isCloudflareEnvironment(context) ? 'Cloudflare' : 'Standard'}`);
     console.log('GitHub token available:', githubToken);
