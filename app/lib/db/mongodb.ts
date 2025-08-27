@@ -9,13 +9,9 @@ function getMongoDBURI(context?: { cloudflare?: { env: Record<string, string> } 
   // Try to get from Wrangler context first (for production)
   const serverEnv = context?.cloudflare?.env || (process.env as Record<string, string>);
 
-  console.log('========== MongoDB Environment Variables ==========', context?.cloudflare?.MONGODB_URI);
+  console.log('========== MongoDB Environment Variables ==========', context?.cloudflare?.env?.MONGODB_URI);
 
-  let mongodbUri =
-    serverEnv.MONGODB_URI ||
-    serverEnv.MONGODB_CONNECTION_STRING ||
-    process.env.MONGODB_URI ||
-    process.env.MONGODB_CONNECTION_STRING;
+  let mongodbUri = context?.cloudflare?.env?.MONGODB_URI;
 
   console.log('MongoDB Environment Debug:', {
     hasServerEnvMongoDB_URI: !!serverEnv.MONGODB_URI,
