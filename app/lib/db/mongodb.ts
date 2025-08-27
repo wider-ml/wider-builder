@@ -47,7 +47,7 @@ function getMongoDBURI(context?: { cloudflare?: { env: Record<string, string> } 
   const finalUri =
     mongodbUri ||
     // Default to local MongoDB for development/production
-    'mongodb://admin:IntInmoLeWDr@localhost:27017/builderDB?authSource=admin';
+    'mongodb://admin:wider123@mongodb:27017/wider-builder?authSource=admin';
 
   console.log('Final MongoDB URI:', finalUri);
   return finalUri;
