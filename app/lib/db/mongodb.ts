@@ -2,7 +2,7 @@ import { MongoClient, Db, Collection } from 'mongodb';
 
 const MONGODB_URI =
   process.env.MONGODB_CONNECTION_STRING ||
-  'mongodb+srv://iamthemunna10:munna12345@munna-cluster.d248zqq.mongodb.net/wider-builder?retryWrites=true&w=majority';
+  'mongodb+srv://widerml:wider1234@buldercluster.sbhizjq.mongodb.net/?retryWrites=true&w=majority&appName=bulderCluster';
 
 export async function connectToDatabase(): Promise<Db> {
   const client = new MongoClient(MONGODB_URI, {
