@@ -20,6 +20,9 @@ EXPOSE 5173
 # Production image
 FROM base AS bolt-ai-production
 
+
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
 # Define environment variables with default values or let them be overridden
 ARG GROQ_API_KEY
 ARG HuggingFace_API_KEY
