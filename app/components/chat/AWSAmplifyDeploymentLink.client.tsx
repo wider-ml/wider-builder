@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import { useStore } from '@nanostores/react';
 import { awsConnection, checkAWSCredentials } from '~/lib/stores/aws';
 import { chatId } from '~/lib/persistence/useChatHistory';
