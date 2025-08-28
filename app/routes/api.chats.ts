@@ -74,57 +74,57 @@ export const action: ActionFunction = async ({ request }) => {
 
     logger.info(`Chat ${chatData.id} ${result.upsertedId ? 'created' : 'updated'} for user ${userId}`);
 
-    if (!!result.upsertedId) {
-      const chatInfoForWider = {
-        title: document.description || 'New Chat',
-        url: '',
-        snapshot_id: '',
-        chat_id: document.id,
-        host_app_id: '',
-      };
+    // if (!!result.upsertedId) {
+    //   const chatInfoForWider = {
+    //     title: document.description || 'New Chat',
+    //     url: '',
+    //     snapshot_id: '',
+    //     chat_id: document.id,
+    //     host_app_id: '',
+    //   };
 
-      const URL = process.env.API_ROOT_URL || 'https://dev-app.widerml.com';
+    //   const URL = process.env.API_ROOT_URL || 'https://dev-app.widerml.com';
 
-      /*
-       * const response = await fetch(`${URL}/api/v1/web-projects/`, {
-       *   method: 'POST',
-       *   headers: {
-       *     'Content-Type': 'application/json',
-       *     Accept: 'application/json',
-       *     Authorization: `Bearer ${token}`,
-       *   },
-       *   body: JSON.stringify(chatInfoForWider),
-       * });
-       */
+    //   /*
+    //    * const response = await fetch(`${URL}/api/v1/web-projects/`, {
+    //    *   method: 'POST',
+    //    *   headers: {
+    //    *     'Content-Type': 'application/json',
+    //    *     Accept: 'application/json',
+    //    *     Authorization: `Bearer ${token}`,
+    //    *   },
+    //    *   body: JSON.stringify(chatInfoForWider),
+    //    * });
+    //    */
 
-      /*
-       * if (!response.ok) {
-       *   console.log(`Failed to create chat in Wider:}, ${response.status} ${response.statusText}`);
-       * } else {
-       *   console.log(`Chat created in Wider successfully: ${chatInfoForWider.chat_id}`);
-       * }
-       */
+    //   /*
+    //    * if (!response.ok) {
+    //    *   console.log(`Failed to create chat in Wider:}, ${response.status} ${response.statusText}`);
+    //    * } else {
+    //    *   console.log(`Chat created in Wider successfully: ${chatInfoForWider.chat_id}`);
+    //    * }
+    //    */
 
-      fetch(`${URL}/api/v1/web-projects/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(chatInfoForWider),
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          console.log('Chat created in Wider successfully:', chatInfoForWider.chat_id);
-          console.log('Wider creation success response:', data);
+    //   fetch(`${URL}/api/v1/web-projects/`, {
+    //     method: 'POST',
+    //     headers: {
+    //       'Content-Type': 'application/json',
+    //       Accept: 'application/json',
+    //       Authorization: `Bearer ${token}`,
+    //     },
+    //     body: JSON.stringify(chatInfoForWider),
+    //   })
+    //     .then((response) => response.json())
+    //     .then((data) => {
+    //       console.log('Chat created in Wider successfully:', chatInfoForWider.chat_id);
+    //       console.log('Wider creation success response:', data);
 
-          // do your "next step" here
-        })
-        .catch((error) => {
-          console.error('Error while creting chat in Wider:', error);
-        });
-    }
+    //       // do your "next step" here
+    //     })
+    //     .catch((error) => {
+    //       console.error('Error while creting chat in Wider:', error);
+    //     });
+    // }
 
     return json({
       success: true,

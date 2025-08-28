@@ -1,20 +1,4 @@
 services:
-  mongodb:
-    image: mongo:7.0
-    container_name: wider-mongodb
-    restart: unless-stopped
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: wider123
-      MONGO_INITDB_DATABASE: wider-builder
-    ports:
-      - '27017:27017'
-    volumes:
-      - mongodb_data:/data/db
-      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
-    networks:
-      - wider-network
-
   app-prod:
     image: bolt-ai:production
     build:
@@ -43,6 +27,3 @@ services:
 networks:
   wider-network:
     driver: bridge
-
-volumes:
-  mongodb_data:

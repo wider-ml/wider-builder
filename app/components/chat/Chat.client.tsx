@@ -95,15 +95,45 @@ const processSampledMessages = createSampler(
     isLoading: boolean;
     parseMessages: (messages: Message[], isLoading: boolean) => void;
     storeMessageHistory: (messages: Message[]) => Promise<void>;
+    previousIsLoading: boolean;
+    hasStoredInitialMessage: boolean;
+    setPreviousIsLoading: (loading: boolean) => void;
+    setHasStoredInitialMessage: (stored: boolean) => void;
   }) => {
-    const { messages, initialMessages, isLoading, parseMessages, storeMessageHistory } = options;
+    const { 
+      messages, 
+      initialMessages, 
+      isLoading, 
+      parseMessages, 
+      storeMessageHistory,
+      previousIsLoading,
+      hasStoredInitialMessage,
+      setPreviousIsLoading,
+      setHasStoredInitialMessage
+    } = options;
+    
     parseMessages(messages, isLoading);
 
     if (messages.length > initialMessages.length) {
-      storeMessageHistory(messages).catch((error) => toast.error(error.message));
+      // Store when user sends a new message (chat starts)
+      const hasNewUserMessage = messages.some(
+        (msg, index) => msg.role === 'user' && index >= initialMessages.length
+      );
+      
+      if (hasNewUserMessage && !hasStoredInitialMessage) {
+        setHasStoredInitialMessage(true);
+        storeMessageHistory(messages).catch((error) => toast.error(error.message));
+      }
+      
+      // Store when streaming completes (was loading, now not loading)
+      if (previousIsLoading && !isLoading && hasStoredInitialMessage) {
+        storeMessageHistory(messages).catch((error) => toast.error(error.message));
+      }
     }
+    
+    setPreviousIsLoading(isLoading);
   },
-  2000,
+  500, // Reduced interval since we're being more selective
 );
 
 interface ChatProps {
@@ -124,6 +154,8 @@ export const ChatImpl = memo(
     const [imageDataList, setImageDataList] = useState<string[]>([]);
     const [searchParams, setSearchParams] = useSearchParams();
     const [fakeLoading, setFakeLoading] = useState(false);
+    const [previousIsLoading, setPreviousIsLoading] = useState(false);
+    const [hasStoredInitialMessage, setHasStoredInitialMessage] = useState(false);
     const files = useStore(workbenchStore.files);
     const [designScheme, setDesignScheme] = useState<DesignScheme>(defaultDesignScheme);
     const actionAlert = useStore(workbenchStore.alert);
@@ -242,8 +274,12 @@ export const ChatImpl = memo(
         isLoading,
         parseMessages,
         storeMessageHistory,
+        previousIsLoading,
+        hasStoredInitialMessage,
+        setPreviousIsLoading,
+        setHasStoredInitialMessage,
       });
-    }, [messages, isLoading, parseMessages]);
+    }, [messages, isLoading, parseMessages, previousIsLoading, hasStoredInitialMessage]);
 
     const scrollTextArea = () => {
       const textarea = textareaRef.current;

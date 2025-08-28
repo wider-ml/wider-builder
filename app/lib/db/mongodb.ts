@@ -1,67 +1,19 @@
 import { MongoClient, Db, Collection } from 'mongodb';
-import { execSync } from 'child_process';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('MongoDB');
 
-// Function to get MongoDB URI from environment
-function getMongoDBURI(context?: { cloudflare?: { env: Record<string, string> } }): string {
-  // Try to get from Wrangler context first (for production)
-  const serverEnv = context?.cloudflare?.env || (process.env as Record<string, string>);
-
-  console.log('========== MongoDB Environment Variables ==========', context?.cloudflare?.env?.MONGODB_URI);
-
-  let mongodbUri = context?.cloudflare?.env?.MONGODB_URI;
-
-  console.log('MongoDB Environment Debug:', {
-    hasServerEnvMongoDB_URI: !!serverEnv.MONGODB_URI,
-    hasServerEnvMongoDB_CONNECTION_STRING: !!serverEnv.MONGODB_CONNECTION_STRING,
-    hasProcessEnvMongoDB_URI: !!process.env.MONGODB_URI,
-    hasProcessEnvMongoDB_CONNECTION_STRING: !!process.env.MONGODB_CONNECTION_STRING,
-    mongodbUri: mongodbUri ? 'Found' : 'Not found',
-    processEnvKeys: Object.keys(process.env).filter((key) => key.includes('MONGO')),
-    processEnvCount: Object.keys(process.env).length,
-  });
-
-  // If not found in process.env, try execSync fallback (for Docker environments)
-  if (!mongodbUri) {
-    try {
-      const envOutput = execSync('printenv', { encoding: 'utf8' });
-      const envLines = envOutput.split('\n');
-      for (const line of envLines) {
-        if (line.startsWith('MONGODB_URI=')) {
-          mongodbUri = line.substring('MONGODB_URI='.length);
-          console.log('Found MONGODB_URI via execSync:', mongodbUri ? 'Yes' : 'No');
-          break;
-        } else if (line.startsWith('MONGODB_CONNECTION_STRING=')) {
-          mongodbUri = line.substring('MONGODB_CONNECTION_STRING='.length);
-          console.log('Found MONGODB_CONNECTION_STRING via execSync:', mongodbUri ? 'Yes' : 'No');
-          break;
-        }
-      }
-    } catch (execError) {
-      console.error('Error executing printenv for MongoDB:', execError);
-    }
-  }
-
-  const finalUri =
-    mongodbUri ||
-    // Default to local MongoDB for development/production
-    'mongodb://admin:wider123@mongodb:27017/wider-builder?authSource=admin';
-
-  console.log('Final MongoDB URI:', finalUri);
-  return finalUri;
-}
+const MONGODB_URI =
+  process.env.MONGODB_CONNECTION_STRING ||
+  'mongodb+srv://widerml:wider1234@buldercluster.sbhizjq.mongodb.net/?retryWrites=true&w=majority&appName=bulderCluster';
 
 let client: MongoClient | null = null;
 let db: Db | null = null;
 
-export async function connectToDatabase(context?: { cloudflare?: { env: Record<string, string> } }): Promise<Db> {
+export async function connectToDatabase(): Promise<Db> {
   if (db) {
     return db;
   }
-
-  const MONGODB_URI = getMongoDBURI(context);
 
   if (!MONGODB_URI) {
     logger.error('MongoDB connection string is not defined');
@@ -72,26 +24,17 @@ export async function connectToDatabase(context?: { cloudflare?: { env: Record<s
 
   try {
     if (!client) {
-      // Determine if we're connecting to a local MongoDB or Atlas
-      const isLocalMongoDB = MONGODB_URI.includes('mongodb://') && !MONGODB_URI.includes('mongodb.net');
-
-      const clientOptions: any = {
-        maxPoolSize: 10,
-        serverSelectionTimeoutMS: 10000,
+      client = new MongoClient(MONGODB_URI, {
+        maxPoolSize: 50,
+        serverSelectionTimeoutMS: 30000,
         socketTimeoutMS: 0,
         connectTimeoutMS: 10000,
         maxIdleTimeMS: 0,
         retryWrites: true,
-      };
-
-      // Only add TLS options for Atlas connections
-      if (!isLocalMongoDB) {
-        clientOptions.tls = true;
-        clientOptions.tlsAllowInvalidCertificates = false;
-        clientOptions.tlsAllowInvalidHostnames = false;
-      }
-
-      client = new MongoClient(MONGODB_URI, clientOptions);
+        tls: true,
+        tlsAllowInvalidCertificates: false,
+        tlsAllowInvalidHostnames: false,
+      });
     }
 
     await client.connect();
@@ -106,18 +49,14 @@ export async function connectToDatabase(context?: { cloudflare?: { env: Record<s
   }
 }
 
-export async function getChatsCollection(context?: {
-  cloudflare?: { env: Record<string, string> };
-}): Promise<Collection> {
-  const database = await connectToDatabase(context);
+export async function getChatsCollection(): Promise<Collection> {
+  const database = await connectToDatabase();
 
   return database.collection('chats');
 }
 
-export async function getSnapshotsCollection(context?: {
-  cloudflare?: { env: Record<string, string> };
-}): Promise<Collection> {
-  const database = await connectToDatabase(context);
+export async function getSnapshotsCollection(): Promise<Collection> {
+  const database = await connectToDatabase();
   return database.collection('snapshots');
 }
 
