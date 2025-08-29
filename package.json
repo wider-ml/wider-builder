@@ -12,8 +12,7 @@
   },
   "scripts": {
     "deploy": "npm run build && wrangler pages deploy",
-    "prebuild": "sass --embed-source-map --embed-sources app:app",
-    "build": "NODE_OPTIONS='--max-old-space-size=4096' remix vite:build",
+    "build": "sass --no-source-map app:app && NODE_OPTIONS='--max-old-space-size=4096' remix build",
     "dev": "node pre-start.cjs  && remix vite:dev",
     "test": "vitest --run",
     "test:watch": "vitest",
