@@ -19,7 +19,7 @@ export interface ChatDocument {
 }
 
 // GET /api/chats/:id - Get chat by ID
-export const loader: LoaderFunction = async ({ request, params }) => {
+export const loader: LoaderFunction = async ({ request, context, params }) => {
   const { id } = params;
 
   if (!id) {
@@ -28,7 +28,7 @@ export const loader: LoaderFunction = async ({ request, params }) => {
 
   try {
     const userId = extractUserIdFromRequest(request);
-    const collection = await getChatsCollection();
+    const collection = await getChatsCollection(context);
 
     // Try to find by id first, then by urlId - but always filter by userId
     let chat = await collection.findOne({ id, userId });

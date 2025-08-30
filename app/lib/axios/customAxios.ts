@@ -95,9 +95,7 @@ axios.interceptors.response.use(
       }
 
       try {
-        setAuthBaseURL();
-
-        const response: any = await axios.post('/api/v1/token/refresh/', {
+        const response: any = await axios.post('https://dev-auth.widerml.com/api/v1/token/refresh/', {
           refresh: refreshToken,
         });
         const { access } = response;

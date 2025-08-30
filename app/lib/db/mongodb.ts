@@ -3,18 +3,15 @@ import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('MongoDB');
 
-const MONGODB_URI =
-  process.env.MONGODB_CONNECTION_STRING ||
-  'mongodb+srv://iamthemunna10:wider12345@munna-cluster.d248zqq.mongodb.net/wider-builder?retryWrites=true&w=majority';
-
 let client: MongoClient | null = null;
 let db: Db | null = null;
 
-export async function connectToDatabase(): Promise<Db> {
+export async function connectToDatabase(context: any): Promise<Db> {
   if (db) {
     return db;
   }
 
+  const MONGODB_URI = context?.cloudflare?.env.MONGODB_URI || process.env.MONGODB_URI;
   if (!MONGODB_URI) {
     logger.error('MongoDB connection string is not defined');
     throw new Error('MongoDB connection string is not defined');
@@ -49,14 +46,14 @@ export async function connectToDatabase(): Promise<Db> {
   }
 }
 
-export async function getChatsCollection(): Promise<Collection> {
-  const database = await connectToDatabase();
+export async function getChatsCollection(context: any): Promise<Collection> {
+  const database = await connectToDatabase(context);
 
   return database.collection('chats');
 }
 
-export async function getSnapshotsCollection(): Promise<Collection> {
-  const database = await connectToDatabase();
+export async function getSnapshotsCollection(context: any): Promise<Collection> {
+  const database = await connectToDatabase(context);
   return database.collection('snapshots');
 }
 

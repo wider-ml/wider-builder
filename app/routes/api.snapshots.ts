@@ -13,7 +13,7 @@ export interface SnapshotDocument {
 }
 
 // POST /api/snapshots - Create or update snapshot
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({ request, context }) => {
   if (request.method !== 'POST') {
     return json({ error: 'Method not allowed' }, { status: 405 });
   }
@@ -28,7 +28,7 @@ export const action: ActionFunction = async ({ request }) => {
       return json({ error: 'Chat ID and snapshot data are required' }, { status: 400 });
     }
 
-    const collection = await getSnapshotsCollection();
+    const collection = await getSnapshotsCollection(context);
 
     const document: SnapshotDocument = {
       chatId,

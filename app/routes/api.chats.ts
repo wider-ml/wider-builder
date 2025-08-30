@@ -19,10 +19,10 @@ export interface ChatDocument {
 }
 
 // GET /api/chats - Get all chats
-export const loader: LoaderFunction = async ({ request }) => {
+export const loader: LoaderFunction = async ({ request, context }) => {
   try {
     const userId = extractUserIdFromRequest(request);
-    const collection = await getChatsCollection();
+    const collection = await getChatsCollection(context);
     const chats = await collection.find({ userId }).sort({ timestamp: -1 }).toArray();
 
     // Convert MongoDB _id to id for compatibility
@@ -39,7 +39,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 };
 
 // POST /api/chats - Create or update a chat
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({ request, context }) => {
   if (request.method !== 'POST') {
     return json({ error: 'Method not allowed' }, { status: 405 });
   }
@@ -56,7 +56,7 @@ export const action: ActionFunction = async ({ request }) => {
       return json({ error: 'Chat ID is required' }, { status: 400 });
     }
 
-    const collection = await getChatsCollection();
+    const collection = await getChatsCollection(context);
 
     // Prepare document for MongoDB
     const document: ChatDocument = {
