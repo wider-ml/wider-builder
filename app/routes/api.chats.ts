@@ -1,5 +1,4 @@
 import { json, type ActionFunction, type LoaderFunction } from '@remix-run/node';
-import { getChatsCollection } from '~/lib/db/mongodb';
 import { createScopedLogger } from '~/utils/logger';
 import { extractUserIdFromRequest } from '~/utils/auth.server';
 import type { Message } from 'ai';
@@ -8,7 +7,6 @@ import type { IChatMetadata } from '~/lib/persistence/db';
 const logger = createScopedLogger('api.chats');
 
 export interface ChatDocument {
-  _id?: string;
   id: string;
   userId: string;
   urlId?: string;
@@ -18,28 +16,54 @@ export interface ChatDocument {
   metadata?: IChatMetadata;
 }
 
-// GET /api/chats - Get all chats
-export const loader: LoaderFunction = async ({ request, context }) => {
+// GET /api/chats - Get all chats from Django API
+export const loader: LoaderFunction = async ({ request }) => {
   try {
     const userId = extractUserIdFromRequest(request);
-    const collection = await getChatsCollection(context);
-    const chats = await collection.find({ userId }).sort({ timestamp: -1 }).toArray();
+    const authHeader = request.headers.get('authorization');
+    const token = authHeader?.replace('Bearer ', '');
 
-    // Convert MongoDB _id to id for compatibility
-    const formattedChats = chats.map((chat) => ({
-      ...chat,
-      _id: undefined, // Remove MongoDB _id
+    if (!token) {
+      return json({ error: 'No authorization token provided' }, { status: 401 });
+    }
+
+    const API_ROOT_URL = process.env.API_ROOT_URL;
+    const response = await fetch(`${API_ROOT_URL}/api/v1/web-projects/`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      logger.error(`Failed to fetch chats from Django API: ${response.status} ${response.statusText}`);
+      return json({ error: 'Failed to fetch chats' }, { status: response.status });
+    }
+
+    const webProjects = (await response.json()) as any[];
+
+    // Convert Django WebProject format to ChatDocument format
+    const formattedChats = webProjects.map((project: any) => ({
+      id: project.chat_id,
+      userId,
+      urlId: project.chat_id,
+      description: project.title,
+      messages: project.chat_data?.messages || [],
+      timestamp: project.created_at || new Date().toISOString(),
+      metadata: project.chat_data?.metadata,
     }));
 
     return json(formattedChats);
   } catch (error) {
     logger.error('Failed to fetch chats:', error);
-    return json({ error: 'Unauthorized or failed to fetch chats' }, { status: 401 });
+    return json({ error: 'Failed to fetch chats' }, { status: 500 });
   }
 };
 
-// POST /api/chats - Create or update a chat
-export const action: ActionFunction = async ({ request, context }) => {
+// POST /api/chats - Create or update a chat in Django API
+export const action: ActionFunction = async ({ request }) => {
   if (request.method !== 'POST') {
     return json({ error: 'Method not allowed' }, { status: 405 });
   }
@@ -47,68 +71,63 @@ export const action: ActionFunction = async ({ request, context }) => {
   try {
     const userId = extractUserIdFromRequest(request);
     const chatData = (await request.json()) as ChatDocument;
-
     const authHeader = request.headers.get('authorization');
-
     const token = authHeader?.replace('Bearer ', '');
+
+    if (!token) {
+      return json({ error: 'No authorization token provided' }, { status: 401 });
+    }
 
     if (!chatData.id) {
       return json({ error: 'Chat ID is required' }, { status: 400 });
     }
 
-    const collection = await getChatsCollection(context);
+    const API_ROOT_URL = process.env.API_ROOT_URL;
 
-    // Prepare document for MongoDB
-    const document: ChatDocument = {
-      id: chatData.id,
-      userId,
-      urlId: chatData.urlId,
-      description: chatData.description,
-      messages: chatData.messages || [],
-      timestamp: chatData.timestamp || new Date().toISOString(),
-      metadata: chatData.metadata,
+    if (!API_ROOT_URL) {
+      logger.error('API_ROOT_URL environment variable is not set');
+      return json({ error: 'API configuration error' }, { status: 500 });
+    }
+
+    // Prepare data for Django WebProject model - store entire chatData as JSON
+    const webProjectData = {
+      title: chatData.description || 'New Chat',
+      chat_id: chatData.id,
+      chat_data: chatData, // Store entire chatData as JSON
+      host_app_id: '',
     };
 
-    // Use upsert to create or update - filter by both id and userId for security
-    const result = await collection.replaceOne({ id: chatData.id, userId }, document, { upsert: true });
+    logger.info(`Attempting to save chat to Django API: ${API_ROOT_URL}/api/v1/web-projects/`);
+    logger.info(`Chat data:`, { chatId: chatData.id, description: chatData.description });
 
-    logger.info(`Chat ${chatData.id} ${result.upsertedId ? 'created' : 'updated'} for user ${userId}`);
+    // Send to Django API
+    const response = await fetch(`${API_ROOT_URL}/api/v1/web-projects/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(webProjectData),
+    });
 
-    if (!!result.upsertedId) {
-      const chatInfoForWider = {
-        title: document.description || 'New Chat',
-        url: '',
-        snapshot_id: '',
-        chat_id: document.id,
-        host_app_id: '',
-      };
-
-      const URL = process.env.API_ROOT_URL;
-
-      const response = await fetch(`${URL}/api/v1/web-projects/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(chatInfoForWider),
-      });
-
-      if (!response.ok) {
-        console.log(`Failed to create chat in Wider:}, ${response.status} ${response.statusText}`);
-      } else {
-        console.log(`Chat created in Wider successfully: ${chatInfoForWider.chat_id}`);
-      }
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error(`Failed to save chat in Django API: ${response.status} ${response.statusText} - ${errorText}`);
+      return json({ error: 'Failed to save chat' }, { status: response.status });
     }
+
+    const result = (await response.json()) as any;
+    logger.info(`Chat ${chatData.id} saved for user ${userId}`);
 
     return json({
       success: true,
       id: chatData.id,
-      created: !!result.upsertedId,
+      created: true,
+      projectId: result.id,
     });
   } catch (error) {
     logger.error('Failed to save chat:', error);
-    return json({ error: 'Unauthorized or failed to save chat' }, { status: 401 });
+    return json({ error: 'Failed to save chat' }, { status: 500 });
   }
 };
