@@ -88,22 +88,33 @@ export function Chat() {
   );
 }
 
-const processSampledMessages = createSampler(
+// Separate sampler for streaming display (50ms for real-time updates)
+const processStreamingMessages = createSampler(
+  (options: {
+    messages: Message[];
+    isLoading: boolean;
+    parseMessages: (messages: Message[], isLoading: boolean) => void;
+  }) => {
+    const { messages, isLoading, parseMessages } = options;
+    parseMessages(messages, isLoading);
+  },
+  50,
+);
+
+// Separate sampler for API storage (10 seconds to reduce server load)
+const processStorageMessages = createSampler(
   (options: {
     messages: Message[];
     initialMessages: Message[];
-    isLoading: boolean;
-    parseMessages: (messages: Message[], isLoading: boolean) => void;
     storeMessageHistory: (messages: Message[]) => Promise<void>;
   }) => {
-    const { messages, initialMessages, isLoading, parseMessages, storeMessageHistory } = options;
-    parseMessages(messages, isLoading);
-
+    const { messages, initialMessages, storeMessageHistory } = options;
+    
     if (messages.length > initialMessages.length) {
       storeMessageHistory(messages).catch((error) => toast.error(error.message));
     }
   },
-  50,
+  10000,
 );
 
 interface ChatProps {
@@ -236,11 +247,17 @@ export const ChatImpl = memo(
     }, []);
 
     useEffect(() => {
-      processSampledMessages({
+      // Handle streaming display at 50ms for real-time updates
+      processStreamingMessages({
         messages,
-        initialMessages,
         isLoading,
         parseMessages,
+      });
+      
+      // Handle API storage at 10 seconds to reduce server load
+      processStorageMessages({
+        messages,
+        initialMessages,
         storeMessageHistory,
       });
     }, [messages, isLoading, parseMessages]);
