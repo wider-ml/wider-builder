@@ -7,14 +7,15 @@ interface StatusRequestBody {
   domainName?: string;
 }
 
-export async function action({ request }: ActionFunctionArgs) {
+export async function action({ request, context }: ActionFunctionArgs) {
   try {
     const { appId, jobId, domainName } = (await request.json()) as StatusRequestBody;
 
-    // Get AWS credentials from environment variables
-    const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-    const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-    const region = process.env.AWS_REGION || 'us-east-1';
+    // Get AWS credentials from Cloudflare context or environment variables
+    const env = (context.cloudflare?.env as any) || process.env;
+    const accessKeyId = env.AWS_ACCESS_KEY_ID;
+    const secretAccessKey = env.AWS_SECRET_ACCESS_KEY;
+    const region = env.AWS_REGION || 'us-east-1';
 
     if (!accessKeyId || !secretAccessKey) {
       return json({ error: 'AWS credentials not configured in environment variables' }, { status: 401 });
