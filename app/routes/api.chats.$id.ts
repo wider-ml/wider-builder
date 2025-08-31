@@ -17,7 +17,7 @@ export interface ChatDocument {
 }
 
 // GET /api/chats/:id - Get chat by ID from Django API
-export const loader: LoaderFunction = async ({ request, params }) => {
+export const loader: LoaderFunction = async ({ request, params, context }) => {
   const { id } = params;
 
   if (!id) {
@@ -33,7 +33,7 @@ export const loader: LoaderFunction = async ({ request, params }) => {
       return json({ error: 'No authorization token provided' }, { status: 401 });
     }
 
-    const API_ROOT_URL = process.env.API_ROOT_URL;
+    const API_ROOT_URL = (context.cloudflare?.env as any)?.API_ROOT_URL || process.env.API_ROOT_URL;
 
     if (!API_ROOT_URL) {
       logger.error('API_ROOT_URL environment variable is not set');
@@ -86,7 +86,7 @@ export const loader: LoaderFunction = async ({ request, params }) => {
 };
 
 // PUT /api/chats/:id - Update chat via Django API
-export const action: ActionFunction = async ({ request, params }) => {
+export const action: ActionFunction = async ({ request, params, context }) => {
   const { id } = params;
 
   if (!id) {
@@ -104,7 +104,7 @@ export const action: ActionFunction = async ({ request, params }) => {
         return json({ error: 'No authorization token provided' }, { status: 401 });
       }
 
-      const API_ROOT_URL = process.env.API_ROOT_URL;
+      const API_ROOT_URL = (context.cloudflare?.env as any)?.API_ROOT_URL || process.env.API_ROOT_URL;
 
       if (!API_ROOT_URL) {
         logger.error('API_ROOT_URL environment variable is not set');
@@ -159,7 +159,7 @@ export const action: ActionFunction = async ({ request, params }) => {
         return json({ error: 'No authorization token provided' }, { status: 401 });
       }
 
-      const API_ROOT_URL = process.env.API_ROOT_URL;
+      const API_ROOT_URL = (context.cloudflare?.env as any)?.API_ROOT_URL || process.env.API_ROOT_URL;
 
       if (!API_ROOT_URL) {
         logger.error('API_ROOT_URL environment variable is not set');

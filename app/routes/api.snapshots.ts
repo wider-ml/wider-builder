@@ -12,7 +12,7 @@ export interface SnapshotDocument {
 }
 
 // POST /api/snapshots - Create or update snapshot in Django API
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({ request, context }) => {
   if (request.method !== 'POST') {
     return json({ error: 'Method not allowed' }, { status: 405 });
   }
@@ -34,7 +34,7 @@ export const action: ActionFunction = async ({ request }) => {
       return json({ error: 'Chat ID and snapshot data are required' }, { status: 400 });
     }
 
-    const API_ROOT_URL = process.env.API_ROOT_URL;
+    const API_ROOT_URL = (context.cloudflare?.env as any)?.API_ROOT_URL || process.env.API_ROOT_URL;
 
     // Update the WebProject with snapshot data
     const webProjectData = {

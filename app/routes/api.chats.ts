@@ -17,7 +17,7 @@ export interface ChatDocument {
 }
 
 // GET /api/chats - Get all chats from Django API
-export const loader: LoaderFunction = async ({ request }) => {
+export const loader: LoaderFunction = async ({ request, context }) => {
   try {
     const userId = extractUserIdFromRequest(request);
     const authHeader = request.headers.get('authorization');
@@ -27,7 +27,7 @@ export const loader: LoaderFunction = async ({ request }) => {
       return json({ error: 'No authorization token provided' }, { status: 401 });
     }
 
-    const API_ROOT_URL = process.env.API_ROOT_URL;
+    const API_ROOT_URL = (context.cloudflare?.env as any)?.API_ROOT_URL || process.env.API_ROOT_URL;
     const response = await fetch(`${API_ROOT_URL}/api/v1/web-projects/`, {
       method: 'GET',
       headers: {
@@ -63,7 +63,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 };
 
 // POST /api/chats - Create or update a chat in Django API
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({ request, context }) => {
   if (request.method !== 'POST') {
     return json({ error: 'Method not allowed' }, { status: 405 });
   }
@@ -82,7 +82,7 @@ export const action: ActionFunction = async ({ request }) => {
       return json({ error: 'Chat ID is required' }, { status: 400 });
     }
 
-    const API_ROOT_URL = process.env.API_ROOT_URL;
+    const API_ROOT_URL = (context.cloudflare?.env as any)?.API_ROOT_URL || process.env.API_ROOT_URL;
 
     if (!API_ROOT_URL) {
       logger.error('API_ROOT_URL environment variable is not set');
