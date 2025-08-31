@@ -42,6 +42,8 @@ export const action: ActionFunction = async ({ request, context }) => {
       snapshot_data: snapshot, // Store snapshot in snapshot_data field
     };
 
+    console.log(`==== Snapshot posting to======${API_ROOT_URL}/api/v1/web-projects/${chatId}/`);
+
     // Send to Django API - using PATCH to update only snapshot_data field
     const response = await fetch(`${API_ROOT_URL}/api/v1/web-projects/${chatId}/`, {
       method: 'PATCH',
