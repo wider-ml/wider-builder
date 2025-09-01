@@ -110,13 +110,25 @@ async function enhancerAction({ context, request }: ActionFunctionArgs) {
       }
     })();
 
-    // Return the text stream directly since it's already text data
-    return new Response(result.textStream, {
+    // Convert text stream to byte stream for Cloudflare Pages compatibility
+    const encoder = new TextEncoder();
+    const byteStream = result.textStream.pipeThrough(
+      new TransformStream({
+        transform: (chunk, controller) => {
+          // Convert string chunks to bytes
+          const str = typeof chunk === 'string' ? chunk : JSON.stringify(chunk);
+          controller.enqueue(encoder.encode(str));
+        },
+      }),
+    );
+
+    return new Response(byteStream, {
       status: 200,
       headers: {
-        'Content-Type': 'text/event-stream',
-        Connection: 'keep-alive',
+        'Content-Type': 'text/event-stream; charset=utf-8',
         'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
+        'Text-Encoding': 'chunked',
       },
     });
   } catch (error: unknown) {
