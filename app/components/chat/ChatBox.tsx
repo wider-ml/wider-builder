@@ -17,6 +17,7 @@ import styles from './BaseChat.module.scss';
 import type { ProviderInfo } from '~/types/model';
 import type { DesignScheme } from '~/types/design-scheme';
 import type { ElementInfo } from '~/components/workbench/Inspector';
+import { uploadImageToS3 } from '~/utils/imageUpload';
 
 // Removed unused imports: ColorSchemeDialog, McpTools
 
@@ -174,23 +175,25 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
             e.preventDefault();
             e.currentTarget.style.border = '1px solid var(--bolt-elements-borderColor)';
           }}
-          onDrop={(e) => {
+          onDrop={async (e) => {
             e.preventDefault();
             e.currentTarget.style.border = '1px solid var(--bolt-elements-borderColor)';
 
             const files = Array.from(e.dataTransfer.files);
-            files.forEach((file) => {
+            for (const file of files) {
               if (file.type.startsWith('image/')) {
-                const reader = new FileReader();
-
-                reader.onload = (e) => {
-                  const base64Image = e.target?.result as string;
+                try {
+                  toast.info('Uploading dropped image to S3...');
+                  const uploadedImage = await uploadImageToS3(file);
                   props.setUploadedFiles?.([...props.uploadedFiles, file]);
-                  props.setImageDataList?.([...props.imageDataList, base64Image]);
-                };
-                reader.readAsDataURL(file);
+                  props.setImageDataList?.([...props.imageDataList, uploadedImage.url]);
+                  toast.success('Dropped image uploaded successfully!');
+                } catch (error) {
+                  console.error('Failed to upload dropped image:', error);
+                  toast.error(`Failed to upload dropped image: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                }
               }
-            });
+            }
           }}
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
