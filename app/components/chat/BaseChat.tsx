@@ -34,6 +34,8 @@ import { ChatBox } from './ChatBox';
 import type { DesignScheme } from '~/types/design-scheme';
 import type { ElementInfo } from '~/components/workbench/Inspector';
 import LlmErrorAlert from './LLMApiAlert';
+import { uploadImageToS3 } from '~/utils/imageUpload';
+import { toast } from 'react-toastify';
 
 const TEXTAREA_MIN_HEIGHT = 76;
 
@@ -301,14 +303,16 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
         const file = (e.target as HTMLInputElement).files?.[0];
 
         if (file) {
-          const reader = new FileReader();
-
-          reader.onload = (e) => {
-            const base64Image = e.target?.result as string;
+          try {
+            toast.info('Uploading image to S3...');
+            const uploadedImage = await uploadImageToS3(file);
             setUploadedFiles?.([...uploadedFiles, file]);
-            setImageDataList?.([...imageDataList, base64Image]);
-          };
-          reader.readAsDataURL(file);
+            setImageDataList?.([...imageDataList, uploadedImage.url]);
+            toast.success('Image uploaded successfully!');
+          } catch (error) {
+            console.error('Failed to upload image:', error);
+            toast.error(`Failed to upload image: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          }
         }
       };
 
@@ -329,14 +333,16 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
           const file = item.getAsFile();
 
           if (file) {
-            const reader = new FileReader();
-
-            reader.onload = (e) => {
-              const base64Image = e.target?.result as string;
+            try {
+              toast.info('Uploading pasted image to S3...');
+              const uploadedImage = await uploadImageToS3(file);
               setUploadedFiles?.([...uploadedFiles, file]);
-              setImageDataList?.([...imageDataList, base64Image]);
-            };
-            reader.readAsDataURL(file);
+              setImageDataList?.([...imageDataList, uploadedImage.url]);
+              toast.success('Pasted image uploaded successfully!');
+            } catch (error) {
+              console.error('Failed to upload pasted image:', error);
+              toast.error(`Failed to upload pasted image: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            }
           }
 
           break;
