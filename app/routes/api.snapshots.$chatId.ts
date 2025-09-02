@@ -1,6 +1,5 @@
 import { json, type LoaderFunction } from '@remix-run/node';
 import { createScopedLogger } from '~/utils/logger';
-import { extractUserIdFromRequest } from '~/utils/auth.server';
 
 const logger = createScopedLogger('api.snapshots.$chatId');
 
@@ -13,7 +12,6 @@ export const loader: LoaderFunction = async ({ request, params, context }) => {
   }
 
   try {
-    const userId = extractUserIdFromRequest(request);
     const authHeader = request.headers.get('authorization');
     const token = authHeader?.replace('Bearer ', '');
 
@@ -29,7 +27,7 @@ export const loader: LoaderFunction = async ({ request, params, context }) => {
     }
 
     // Fetch specific web project by chat_id from Django API
-    const response = await fetch(`${API_ROOT_URL}/api/v1/web-projects/?chat_id=${chatId}`, {
+    const response = await fetch(`${API_ROOT_URL}/api/v1/web-projects/${chatId}/`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -48,17 +46,15 @@ export const loader: LoaderFunction = async ({ request, params, context }) => {
       return json({ error: 'Failed to fetch snapshot' }, { status: response.status });
     }
 
-    const webProjects = (await response.json()) as any[];
+    const webProjects = (await response.json()) as any;
 
-    // Find the project with matching chat_id
-    const project = webProjects.find((p: any) => p.chat_id === chatId);
-
-    if (!project || !project.snapshot_data) {
+    // Directly check if the object matches the chatId
+    if (webProjects.chat_id !== chatId || !webProjects.snapshot_data) {
       return json({ error: 'Snapshot not found' }, { status: 404 });
     }
 
     // Return just the snapshot data
-    return json(project.snapshot_data);
+    return json(webProjects.snapshot_data);
   } catch (error) {
     logger.error('Failed to fetch snapshot:', error);
     return json({ error: 'Failed to fetch snapshot' }, { status: 500 });

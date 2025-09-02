@@ -191,10 +191,25 @@ export function useAWSAmplifyDeploy() {
       // Use chatId instead of artifact.id
       const existingAppId = localStorage.getItem(`aws-amplify-app-${currentChatId}`);
 
+      // Get the auth token from cookies (same way as axios does)
+      const getCookieValue = (name: string) => {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+
+        if (parts.length === 2) {
+          return parts.pop()?.split(';').shift();
+        }
+
+        return null;
+      };
+
+      const authToken = getCookieValue('wider_access_token');
+
       const response = await fetch('/api/aws-amplify-deploy', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(authToken && { Authorization: `Bearer ${authToken}` }),
         },
         body: JSON.stringify({
           appId: existingAppId || undefined,

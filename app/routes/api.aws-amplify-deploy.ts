@@ -459,6 +459,47 @@ export async function action({ request, context }: ActionFunctionArgs) {
         domainAssociationStatus = 'FAILED';
       }
 
+      // Send the deployed URL back to the backend
+      try {
+        const API_ROOT_URL = (context.cloudflare?.env as any)?.API_ROOT_URL || process.env.API_ROOT_URL;
+        const authHeader = request.headers.get('authorization');
+        const token = authHeader?.replace('Bearer ', '');
+
+        console.log('appInfo, API_ROOT_URL, token:', appInfo, API_ROOT_URL, token);
+
+        if (API_ROOT_URL && token && appInfo?.url) {
+          console.log(`Sending deployed URL to backend: ${appInfo.url} for chat ${chatId}`);
+
+          const updateResponse = await fetch(`${API_ROOT_URL}/api/v1/web-projects/${chatId}/`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              url: appInfo.url,
+              hosted_app_id: targetAppId,
+              status: 'published',
+            }),
+          });
+
+          if (updateResponse.ok) {
+            console.log(`Successfully updated backend with deployed URL for chat ${chatId}`);
+          } else {
+            console.warn(
+              `Failed to update backend with deployed URL: ${updateResponse.status} ${updateResponse.statusText}`,
+            );
+          }
+        } else {
+          console.warn('Missing API_ROOT_URL, token, or app URL - skipping backend update');
+        }
+      } catch (backendError) {
+        console.error('Error updating backend with deployed URL:', backendError);
+
+        // Don't fail the deployment if backend update fails
+      }
+
       return json({
         success: true,
         deployment: {
