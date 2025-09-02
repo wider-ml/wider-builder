@@ -133,48 +133,15 @@ interface DeployRequestBody {
   framework?: string;
 }
 
-export async function action({ request }: ActionFunctionArgs) {
+export async function action({ request, context }: ActionFunctionArgs) {
   try {
     const { appId, files, sourceFiles, chatId, framework } = (await request.json()) as DeployRequestBody;
 
-    // Get AWS credentials from environment variables
-    let accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-    let secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-    let region = process.env.AWS_REGION || 'us-east-1';
-
-    console.log('AWS Region:', region);
-    console.log('AWS Access Key ID:', accessKeyId ? `${accessKeyId.substring(0, 4)}****` : 'undefined');
-    console.log('AWS Secret Access Key:', secretAccessKey ? `${secretAccessKey.substring(0, 4)}****` : 'undefined');
-
-    // If process.env doesn't work, try using child process to get env vars
-    if (!accessKeyId || !secretAccessKey) {
-      try {
-        const envOutput = execSync('printenv', { encoding: 'utf8' });
-        const envLines = envOutput.split('\n');
-
-        for (const line of envLines) {
-          if (line.startsWith('AWS_ACCESS_KEY_ID=')) {
-            accessKeyId = line.split('=')[1];
-          } else if (line.startsWith('AWS_SECRET_ACCESS_KEY=')) {
-            secretAccessKey = line.split('=')[1];
-          } else if (line.startsWith('AWS_REGION=')) {
-            region = line.split('=')[1];
-          }
-        }
-
-        console.log('Fallback env check - AWS Region:', region);
-        console.log(
-          'Fallback env check - AWS Access Key ID:',
-          accessKeyId ? `${accessKeyId.substring(0, 4)}****` : 'undefined',
-        );
-        console.log(
-          'Fallback env check - AWS Secret Access Key:',
-          secretAccessKey ? `${secretAccessKey.substring(0, 4)}****` : 'undefined',
-        );
-      } catch (execError) {
-        console.error('Error executing printenv:', execError);
-      }
-    }
+    // Get AWS credentials from Cloudflare context or environment variables
+    const env = (context.cloudflare?.env as any) || process.env;
+    const accessKeyId = env.AWS_ACCESS_KEY_ID;
+    const secretAccessKey = env.AWS_SECRET_ACCESS_KEY;
+    const region = env.AWS_REGION || 'us-east-1';
 
     if (!accessKeyId || !secretAccessKey) {
       return json({ error: 'AWS credentials not configured in environment variables' }, { status: 401 });

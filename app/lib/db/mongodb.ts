@@ -4,67 +4,15 @@ import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('MongoDB');
 
-// Function to get MongoDB URI from environment
-function getMongoDBURI(context?: { cloudflare?: { env: Record<string, string> } }): string {
-  // Try to get from Wrangler context first (for production)
-  const serverEnv = context?.cloudflare?.env || (process.env as Record<string, string>);
-
-  let mongodbUri =
-    serverEnv.MONGODB_URI ||
-    serverEnv.MONGODB_CONNECTION_STRING ||
-    process.env.MONGODB_URI ||
-    process.env.MONGODB_CONNECTION_STRING;
-
-  console.log('MongoDB Environment Debug:', {
-    hasServerEnvMongoDB_URI: !!serverEnv.MONGODB_URI,
-    hasServerEnvMongoDB_CONNECTION_STRING: !!serverEnv.MONGODB_CONNECTION_STRING,
-    hasProcessEnvMongoDB_URI: !!process.env.MONGODB_URI,
-    hasProcessEnvMongoDB_CONNECTION_STRING: !!process.env.MONGODB_CONNECTION_STRING,
-    mongodbUri: mongodbUri ? 'Found' : 'Not found',
-    processEnvKeys: Object.keys(process.env).filter((key) => key.includes('MONGO')),
-    processEnvCount: Object.keys(process.env).length,
-  });
-
-  // If not found in process.env, try execSync fallback (for Docker environments)
-  if (!mongodbUri) {
-    try {
-      const envOutput = execSync('printenv', { encoding: 'utf8' });
-      const envLines = envOutput.split('\n');
-      for (const line of envLines) {
-        if (line.startsWith('MONGODB_URI=')) {
-          mongodbUri = line.substring('MONGODB_URI='.length);
-          console.log('Found MONGODB_URI via execSync:', mongodbUri ? 'Yes' : 'No');
-          break;
-        } else if (line.startsWith('MONGODB_CONNECTION_STRING=')) {
-          mongodbUri = line.substring('MONGODB_CONNECTION_STRING='.length);
-          console.log('Found MONGODB_CONNECTION_STRING via execSync:', mongodbUri ? 'Yes' : 'No');
-          break;
-        }
-      }
-    } catch (execError) {
-      console.error('Error executing printenv for MongoDB:', execError);
-    }
-  }
-
-  const finalUri =
-    mongodbUri ||
-    // Default to local MongoDB for development/production
-    'mongodb://wider-app:wider-app-password@mongodb:27017/wider-builder?authSource=wider-builder';
-
-  console.log('Final MongoDB URI:', finalUri);
-  return finalUri;
-}
-
 let client: MongoClient | null = null;
 let db: Db | null = null;
 
-export async function connectToDatabase(context?: { cloudflare?: { env: Record<string, string> } }): Promise<Db> {
+export async function connectToDatabase(context: any): Promise<Db> {
   if (db) {
     return db;
   }
 
-  const MONGODB_URI = getMongoDBURI(context);
-
+  const MONGODB_URI = context?.cloudflare?.env.MONGODB_URI || process.env.MONGODB_URI;
   if (!MONGODB_URI) {
     logger.error('MongoDB connection string is not defined');
     throw new Error('MongoDB connection string is not defined');
@@ -108,17 +56,13 @@ export async function connectToDatabase(context?: { cloudflare?: { env: Record<s
   }
 }
 
-export async function getChatsCollection(context?: {
-  cloudflare?: { env: Record<string, string> };
-}): Promise<Collection> {
+export async function getChatsCollection(context: any): Promise<Collection> {
   const database = await connectToDatabase(context);
 
   return database.collection('chats');
 }
 
-export async function getSnapshotsCollection(context?: {
-  cloudflare?: { env: Record<string, string> };
-}): Promise<Collection> {
+export async function getSnapshotsCollection(context: any): Promise<Collection> {
   const database = await connectToDatabase(context);
   return database.collection('snapshots');
 }

@@ -39,8 +39,43 @@ const logger = createScopedLogger('Chat');
 export function Chat() {
   renderLogger.trace('Chat');
 
-  const { ready, initialMessages, storeMessageHistory, importChat, exportChat } = useChatHistory();
+  const { ready, initialMessages: rawInitialMessages, storeMessageHistory, importChat, exportChat } = useChatHistory();
   const title = useStore(description);
+  
+  // Clean up any existing messages with base64 image data
+  const initialMessages = rawInitialMessages.map((message) => {
+    if (message.role === 'user' && message.parts) {
+      // Filter out any file parts with base64 image data and convert to text references
+      const imageUrls: string[] = [];
+      const textParts = message.parts.filter((part) => {
+        if (part.type === 'file' && 'mimeType' in part && part.mimeType.startsWith('image/')) {
+          // Convert base64 image to text reference
+          const base64Data = (part as any).data;
+          if (base64Data && typeof base64Data === 'string') {
+            imageUrls.push(`Base64 data - ${base64Data.substring(0, 50)}...`);
+          }
+          return false; // Remove this file part
+        }
+        return part.type === 'text';
+      });
+      
+      // Add image references to the text content if there were images
+      if (imageUrls.length > 0 && textParts.length > 0) {
+        const textPart = textParts[0] as any;
+        const imageReferences = imageUrls.map((imageRef, index) => 
+          `\n\n[Image ${index + 1}: ${imageRef}]`
+        ).join('');
+        textPart.text += imageReferences;
+      }
+      
+      return {
+        ...message,
+        parts: textParts,
+      };
+    }
+    return message;
+  });
+  
   useEffect(() => {
     workbenchStore.setReloadedMessages(initialMessages.map((m) => m.id));
   }, [initialMessages]);
@@ -88,22 +123,33 @@ export function Chat() {
   );
 }
 
-const processSampledMessages = createSampler(
+// Separate sampler for streaming display (50ms for real-time updates)
+const processStreamingMessages = createSampler(
+  (options: {
+    messages: Message[];
+    isLoading: boolean;
+    parseMessages: (messages: Message[], isLoading: boolean) => void;
+  }) => {
+    const { messages, isLoading, parseMessages } = options;
+    parseMessages(messages, isLoading);
+  },
+  50,
+);
+
+// Separate sampler for API storage (10 seconds to reduce server load)
+const processStorageMessages = createSampler(
   (options: {
     messages: Message[];
     initialMessages: Message[];
-    isLoading: boolean;
-    parseMessages: (messages: Message[], isLoading: boolean) => void;
     storeMessageHistory: (messages: Message[]) => Promise<void>;
   }) => {
-    const { messages, initialMessages, isLoading, parseMessages, storeMessageHistory } = options;
-    parseMessages(messages, isLoading);
-
+    const { messages, initialMessages, storeMessageHistory } = options;
+    
     if (messages.length > initialMessages.length) {
       storeMessageHistory(messages).catch((error) => toast.error(error.message));
     }
   },
-  2000,
+  10000,
 );
 
 interface ChatProps {
@@ -236,11 +282,17 @@ export const ChatImpl = memo(
     }, []);
 
     useEffect(() => {
-      processSampledMessages({
+      // Handle streaming display at 50ms for real-time updates
+      processStreamingMessages({
         messages,
-        initialMessages,
         isLoading,
         parseMessages,
+      });
+      
+      // Handle API storage at 10 seconds to reduce server load
+      processStorageMessages({
+        messages,
+        initialMessages,
         storeMessageHistory,
       });
     }, [messages, isLoading, parseMessages]);
@@ -371,27 +423,30 @@ export const ChatImpl = memo(
     // Helper function to create message parts array from text and images
     const createMessageParts = (text: string, images: string[] = []): Array<TextUIPart | FileUIPart> => {
       // Create an array of properly typed message parts
-      const parts: Array<TextUIPart | FileUIPart> = [
+      let messageText = text;
+
+      // Add all images as text references in the message content
+      if (images.length > 0) {
+        const imageReferences = images.map((imageUrl, index) => {
+          if (imageUrl.startsWith('https://')) {
+            // It's an S3 URL
+            return `\n\n[Image ${index + 1}: ${imageUrl}]`;
+          } else {
+            // It's base64 data, but we'll still reference it as text to avoid size limits
+            return `\n\n[Image ${index + 1}: Base64 data - ${imageUrl.substring(0, 50)}...]`;
+          }
+        }).join('');
+        
+        messageText += imageReferences;
+      }
+
+      // Return only text parts - no file parts to avoid base64 size limits
+      return [
         {
           type: 'text',
-          text,
+          text: messageText,
         },
       ];
-
-      // Add image parts if any
-      images.forEach((imageData) => {
-        // Extract correct MIME type from the data URL
-        const mimeType = imageData.split(';')[0].split(':')[1] || 'image/jpeg';
-
-        // Create file part according to AI SDK format
-        parts.push({
-          type: 'file',
-          mimeType,
-          data: imageData.replace(/^data:image\/[^;]+;base64,/, ''),
-        });
-      });
-
-      return parts;
     };
 
     // Helper function to convert File[] to Attachment[] for AI SDK
@@ -469,12 +524,14 @@ export const ChatImpl = memo(
               const { assistantMessage, userMessage } = temResp;
               const userMessageText = `[Model: ${model}]\n\n[Provider: ${provider.name}]\n\n${finalMessageContent}`;
 
+              const messageParts = createMessageParts(userMessageText, imageDataList);
+              
               setMessages([
                 {
                   id: `1-${new Date().getTime()}`,
                   role: 'user',
                   content: userMessageText,
-                  parts: createMessageParts(userMessageText, imageDataList),
+                  parts: messageParts,
                 },
                 {
                   id: `2-${new Date().getTime()}`,
@@ -489,12 +546,7 @@ export const ChatImpl = memo(
                 },
               ]);
 
-              const reloadOptions =
-                uploadedFiles.length > 0
-                  ? { experimental_attachments: await filesToAttachments(uploadedFiles) }
-                  : undefined;
-
-              reload(reloadOptions);
+              reload();
               setInput('');
               Cookies.remove(PROMPT_COOKIE_KEY);
 
@@ -515,16 +567,17 @@ export const ChatImpl = memo(
         const userMessageText = `[Model: ${model}]\n\n[Provider: ${provider.name}]\n\n${finalMessageContent}`;
         const attachments = uploadedFiles.length > 0 ? await filesToAttachments(uploadedFiles) : undefined;
 
+        const messageParts = createMessageParts(userMessageText, imageDataList);
+        
         setMessages([
           {
             id: `${new Date().getTime()}`,
             role: 'user',
             content: userMessageText,
-            parts: createMessageParts(userMessageText, imageDataList),
-            experimental_attachments: attachments,
+            parts: messageParts,
           },
         ]);
-        reload(attachments ? { experimental_attachments: attachments } : undefined);
+        reload();
         setFakeLoading(false);
         setInput('');
         Cookies.remove(PROMPT_COOKIE_KEY);
@@ -551,32 +604,28 @@ export const ChatImpl = memo(
         const userUpdateArtifact = filesToArtifacts(modifiedFiles, `${Date.now()}`);
         const messageText = `[Model: ${model}]\n\n[Provider: ${provider.name}]\n\n${userUpdateArtifact}${finalMessageContent}`;
 
-        const attachmentOptions =
-          uploadedFiles.length > 0 ? { experimental_attachments: await filesToAttachments(uploadedFiles) } : undefined;
+        const messageParts = createMessageParts(messageText, imageDataList);
 
         append(
           {
             role: 'user',
             content: messageText,
-            parts: createMessageParts(messageText, imageDataList),
+            parts: messageParts,
           },
-          attachmentOptions,
         );
 
         workbenchStore.resetAllFileModifications();
       } else {
         const messageText = `[Model: ${model}]\n\n[Provider: ${provider.name}]\n\n${finalMessageContent}`;
 
-        const attachmentOptions =
-          uploadedFiles.length > 0 ? { experimental_attachments: await filesToAttachments(uploadedFiles) } : undefined;
+        const messageParts = createMessageParts(messageText, imageDataList);
 
         append(
           {
             role: 'user',
             content: messageText,
-            parts: createMessageParts(messageText, imageDataList),
+            parts: messageParts,
           },
-          attachmentOptions,
         );
       }
 

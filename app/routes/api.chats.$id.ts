@@ -1,5 +1,4 @@
 import { json, type ActionFunction, type LoaderFunction } from '@remix-run/node';
-import { getChatsCollection, getSnapshotsCollection } from '~/lib/db/mongodb';
 import { createScopedLogger } from '~/utils/logger';
 import { extractUserIdFromRequest } from '~/utils/auth.server';
 import type { Message } from 'ai';
@@ -8,7 +7,6 @@ import type { IChatMetadata } from '~/lib/persistence/db';
 const logger = createScopedLogger('api.chats.$id');
 
 export interface ChatDocument {
-  _id?: string;
   id: string;
   userId: string;
   urlId?: string;
@@ -18,8 +16,8 @@ export interface ChatDocument {
   metadata?: IChatMetadata;
 }
 
-// GET /api/chats/:id - Get chat by ID
-export const loader: LoaderFunction = async ({ request, params }) => {
+// GET /api/chats/:id - Get chat by ID from Django API
+export const loader: LoaderFunction = async ({ request, params, context }) => {
   const { id } = params;
 
   if (!id) {
@@ -28,31 +26,69 @@ export const loader: LoaderFunction = async ({ request, params }) => {
 
   try {
     const userId = extractUserIdFromRequest(request);
-    const collection = await getChatsCollection();
+    const authHeader = request.headers.get('authorization');
+    const token = authHeader?.replace('Bearer ', '');
 
-    // Try to find by id first, then by urlId - but always filter by userId
-    let chat = await collection.findOne({ id, userId });
-
-    if (!chat) {
-      chat = await collection.findOne({ urlId: id, userId });
+    if (!token) {
+      return json({ error: 'No authorization token provided' }, { status: 401 });
     }
 
-    if (!chat) {
+    const API_ROOT_URL = (context.cloudflare?.env as any)?.API_ROOT_URL || process.env.API_ROOT_URL;
+
+    if (!API_ROOT_URL) {
+      logger.error('API_ROOT_URL environment variable is not set');
+      return json({ error: 'API configuration error' }, { status: 500 });
+    }
+
+    // Fetch specific web project by chat_id from Django API
+    const response = await fetch(`${API_ROOT_URL}/api/v1/web-projects/?chat_id=${id}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return json({ error: 'Chat not found' }, { status: 404 });
+      }
+
+      logger.error(`Failed to fetch chat from Django API: ${response.status} ${response.statusText}`);
+
+      return json({ error: 'Failed to fetch chat' }, { status: response.status });
+    }
+
+    const webProjects = (await response.json()) as any[];
+
+    // Find the project with matching chat_id
+    const project = webProjects.find((p: any) => p.chat_id === id);
+
+    if (!project) {
       return json({ error: 'Chat not found' }, { status: 404 });
     }
 
-    // Remove MongoDB _id for compatibility
-    const { _id, ...chatData } = chat;
+    // Convert Django WebProject format to ChatDocument format
+    const chatData = {
+      id: project.chat_id,
+      userId,
+      urlId: project.chat_id,
+      description: project.title,
+      messages: project.chat_data?.messages || [],
+      timestamp: project.created_at || new Date().toISOString(),
+      metadata: project.chat_data?.metadata,
+    };
 
     return json(chatData);
   } catch (error) {
     logger.error('Failed to fetch chat:', error);
-    return json({ error: 'Unauthorized or failed to fetch chat' }, { status: 401 });
+    return json({ error: 'Failed to fetch chat' }, { status: 500 });
   }
 };
 
-// PUT /api/chats/:id - Update chat
-export const action: ActionFunction = async ({ request, params }) => {
+// PUT /api/chats/:id - Update chat via Django API
+export const action: ActionFunction = async ({ request, params, context }) => {
   const { id } = params;
 
   if (!id) {
@@ -63,77 +99,104 @@ export const action: ActionFunction = async ({ request, params }) => {
     try {
       const userId = extractUserIdFromRequest(request);
       const chatData = (await request.json()) as Partial<ChatDocument>;
-      const collection = await getChatsCollection();
+      const authHeader = request.headers.get('authorization');
+      const token = authHeader?.replace('Bearer ', '');
 
-      // Find existing chat - filter by userId for security
-      const existingChat = await collection.findOne({
-        $or: [
-          { id, userId },
-          { urlId: id, userId },
-        ],
-      });
-
-      if (!existingChat) {
-        return json({ error: 'Chat not found' }, { status: 404 });
+      if (!token) {
+        return json({ error: 'No authorization token provided' }, { status: 401 });
       }
 
-      // Update the chat
-      const updateData = {
-        ...chatData,
-        id: existingChat.id, // Keep original ID
-        userId, // Ensure userId is maintained
-        timestamp: new Date().toISOString(),
+      const API_ROOT_URL = (context.cloudflare?.env as any)?.API_ROOT_URL || process.env.API_ROOT_URL;
+
+      if (!API_ROOT_URL) {
+        logger.error('API_ROOT_URL environment variable is not set');
+        return json({ error: 'API configuration error' }, { status: 500 });
+      }
+
+      // Prepare data for Django WebProject model
+      const webProjectData = {
+        title: chatData.description || 'Updated Chat',
+        chat_id: id,
+        chat_data: chatData, // Store entire chatData as JSON
+        host_app_id: '',
       };
 
-      const result = await collection.updateOne({ _id: existingChat._id }, { $set: updateData });
+      // Update via Django API using PATCH
+      const response = await fetch(`${API_ROOT_URL}/api/v1/web-projects/${id}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(webProjectData),
+      });
 
-      if (result.modifiedCount === 0) {
-        return json({ error: 'Failed to update chat' }, { status: 500 });
+      if (!response.ok) {
+        if (response.status === 404) {
+          return json({ error: 'Chat not found' }, { status: 404 });
+        }
+
+        const errorText = await response.text();
+        logger.error(`Failed to update chat in Django API: ${response.status} ${response.statusText} - ${errorText}`);
+
+        return json({ error: 'Failed to update chat' }, { status: response.status });
       }
 
+      const result = (await response.json()) as any;
       logger.info(`Chat ${id} updated successfully for user ${userId}`);
 
-      return json({ success: true, id: existingChat.id });
+      return json({ success: true, id, projectId: result.id });
     } catch (error) {
       logger.error('Failed to update chat:', error);
-      return json({ error: 'Unauthorized or failed to update chat' }, { status: 401 });
+      return json({ error: 'Failed to update chat' }, { status: 500 });
     }
   }
 
   if (request.method === 'DELETE') {
     try {
       const userId = extractUserIdFromRequest(request);
-      const chatsCollection = await getChatsCollection();
-      const snapshotsCollection = await getSnapshotsCollection();
+      const authHeader = request.headers.get('authorization');
+      const token = authHeader?.replace('Bearer ', '');
 
-      // Find the chat first - filter by userId for security
-      const chat = await chatsCollection.findOne({
-        $or: [
-          { id, userId },
-          { urlId: id, userId },
-        ],
+      if (!token) {
+        return json({ error: 'No authorization token provided' }, { status: 401 });
+      }
+
+      const API_ROOT_URL = (context.cloudflare?.env as any)?.API_ROOT_URL || process.env.API_ROOT_URL;
+
+      if (!API_ROOT_URL) {
+        logger.error('API_ROOT_URL environment variable is not set');
+        return json({ error: 'API configuration error' }, { status: 500 });
+      }
+
+      // Delete via Django API
+      const response = await fetch(`${API_ROOT_URL}/api/v1/web-projects/${id}/`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
       });
 
-      if (!chat) {
-        return json({ error: 'Chat not found' }, { status: 404 });
+      if (!response.ok) {
+        if (response.status === 404) {
+          return json({ error: 'Chat not found' }, { status: 404 });
+        }
+
+        const errorText = await response.text();
+        logger.error(`Failed to delete chat in Django API: ${response.status} ${response.statusText} - ${errorText}`);
+
+        return json({ error: 'Failed to delete chat' }, { status: response.status });
       }
 
-      // Delete chat and associated snapshot
-      const [chatResult] = await Promise.all([
-        chatsCollection.deleteOne({ _id: chat._id }),
-        snapshotsCollection.deleteOne({ chatId: chat.id, userId }),
-      ]);
+      logger.info(`Chat ${id} deleted successfully for user ${userId}`);
 
-      if (chatResult.deletedCount === 0) {
-        return json({ error: 'Failed to delete chat' }, { status: 500 });
-      }
-
-      logger.info(`Chat ${id} and associated snapshot deleted successfully for user ${userId}`);
-
-      return json({ success: true, id: chat.id });
+      return json({ success: true, id });
     } catch (error) {
       logger.error('Failed to delete chat:', error);
-      return json({ error: 'Unauthorized or failed to delete chat' }, { status: 401 });
+      return json({ error: 'Failed to delete chat' }, { status: 500 });
     }
   }
 
