@@ -305,6 +305,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
         if (file) {
           try {
             toast.info('Uploading image to S3...');
+
             const uploadedImage = await uploadImageToS3(file);
             setUploadedFiles?.([...uploadedFiles, file]);
             setImageDataList?.([...imageDataList, uploadedImage.url]);
@@ -335,6 +336,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
           if (file) {
             try {
               toast.info('Uploading pasted image to S3...');
+
               const uploadedImage = await uploadImageToS3(file);
               setUploadedFiles?.([...uploadedFiles, file]);
               setImageDataList?.([...imageDataList, uploadedImage.url]);

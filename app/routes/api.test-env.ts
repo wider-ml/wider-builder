@@ -18,12 +18,13 @@ export async function loader() {
     console.log('Process PID:', process.pid);
 
     // Fallback environment variable reading using execSync
-    let fallbackEnvVars: Record<string, string> = {};
-    let fallbackAwsKeys: string[] = [];
+    const fallbackEnvVars: Record<string, string> = {};
+    const fallbackAwsKeys: string[] = [];
     let fallbackEnvKeysCount = 0;
 
     try {
       console.log('=== Fallback Environment Check ===');
+
       const envOutput = execSync('printenv', { encoding: 'utf8' });
       const envLines = envOutput.split('\n');
 
@@ -31,8 +32,10 @@ export async function loader() {
         if (line.includes('=')) {
           const [key, ...valueParts] = line.split('=');
           const value = valueParts.join('=');
+
           if (key && value) {
             fallbackEnvVars[key] = value;
+
             if (key.includes('AWS')) {
               fallbackAwsKeys.push(key);
             }
@@ -70,6 +73,7 @@ export async function loader() {
       allEnvKeysCount: Object.keys(process.env).length,
       awsKeys: Object.keys(process.env).filter((k) => k.includes('AWS')),
       processPid: process.pid,
+
       // Add fallback data
       fallback: {
         nodeEnv: fallbackEnvVars.NODE_ENV,

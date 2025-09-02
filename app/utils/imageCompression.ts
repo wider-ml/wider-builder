@@ -21,6 +21,7 @@ export async function compressImageForAI(
     }
 
     const img = new Image();
+
     img.onload = () => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');

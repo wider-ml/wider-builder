@@ -13,6 +13,8 @@ export interface User {
   isVerified?: boolean;
   createdAt?: string;
   updatedAt?: string;
+  role?: string;
+  role_name?: string;
 
   // Add other user properties as needed based on your API response
 }
