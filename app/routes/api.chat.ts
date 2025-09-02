@@ -273,17 +273,6 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
 
             result.mergeIntoDataStream(dataStream);
 
-            (async () => {
-              for await (const part of result.fullStream) {
-                if (part.type === 'error') {
-                  const error: any = part.error;
-                  logger.error(`${error}`);
-
-                  return;
-                }
-              }
-            })();
-
             return;
           },
         };
@@ -296,35 +285,43 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
           message: 'Generating Response',
         } satisfies ProgressAnnotation);
 
-        const result = await streamText({
-          messages: [...processedMessages],
-          env: context.cloudflare?.env,
-          options,
-          apiKeys,
-          files,
-          providerSettings,
-          promptId,
-          contextOptimization,
-          contextFiles: filteredFiles,
-          chatMode,
-          designScheme,
-          summary,
-          messageSliceId,
-        });
+        try {
+          const result = await streamText({
+            messages: [...processedMessages],
+            env: context.cloudflare?.env,
+            options,
+            apiKeys,
+            files,
+            providerSettings,
+            promptId,
+            contextOptimization,
+            contextFiles: filteredFiles,
+            chatMode,
+            designScheme,
+            summary,
+            messageSliceId,
+          });
 
-        (async () => {
-          for await (const part of result.fullStream) {
-            if (part.type === 'error') {
-              const error: any = part.error;
-              logger.error(`${error}`);
-
-              return;
-            }
+          if (!result || !result.fullStream) {
+            logger.error('Invalid response from AI API', { result });
+            throw new Error('Invalid response from AI API');
           }
-        })();
-        result.mergeIntoDataStream(dataStream);
+
+          result.mergeIntoDataStream(dataStream);
+        } catch (error: any) {
+          logger.error('Error during AI API call:', {
+            message: error.message,
+            stack: error.stack,
+            response: error.response || null,
+          });
+          throw error; // Re-throw the error to be handled by the outer catch block
+        }
       },
-      onError: (error: any) => `Custom error: ${error.message}`,
+      onError: (error: any) => {
+        logger.error('DataStream onError triggered:', error);
+        // Don't return a custom error message, let it bubble up
+        throw error;
+      },
     }).pipeThrough(
       new TransformStream({
         transform: (chunk, controller) => {

@@ -210,8 +210,10 @@ export async function loader({ request, context }: { request: Request; context: 
   }
 
   try {
-    // Access environment variables from Cloudflare context or process.env
-    // For Remix apps, use server-side environment variables (without VITE_ prefix)
+    /*
+     * Access environment variables from Cloudflare context or process.env
+     * For Remix apps, use server-side environment variables (without VITE_ prefix)
+     */
     const githubToken =
       context?.cloudflare?.env?.GITHUB_TOKEN ||
       context?.cloudflare?.env?.VITE_GITHUB_ACCESS_TOKEN ||
@@ -220,7 +222,7 @@ export async function loader({ request, context }: { request: Request; context: 
 
     console.log(`Fetching repository: ${repo}`);
     console.log(`Environment: ${isCloudflareEnvironment(context) ? 'Cloudflare' : 'Standard'}`);
-    console.log('GitHub token available:', !!githubToken);
+    console.log('GitHub token available:', githubToken);
 
     if (!githubToken) {
       console.warn('No GitHub token found. API requests may be rate limited.');
@@ -228,11 +230,9 @@ export async function loader({ request, context }: { request: Request; context: 
 
     let fileList;
 
-    if (isCloudflareEnvironment(context)) {
-      fileList = await fetchRepoContentsCloudflare(repo, githubToken);
-    } else {
-      fileList = await fetchRepoContentsZip(repo, githubToken);
-    }
+    // Always use the Cloudflare-compatible method (Contents API) as it's more reliable
+    // The zipball method often fails with 403 errors due to permission issues
+    fileList = await fetchRepoContentsCloudflare(repo, githubToken);
 
     // Filter out .git files for both methods
     const filteredFiles = fileList.filter((file: any) => !file.path.startsWith('.git'));

@@ -164,6 +164,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
           const estimatedTotal = 5 * 60 * 1000; // 5 minutes typical deployment time
           const remaining = Math.max(0, estimatedTotal - elapsed);
           estimatedCompletion = new Date(Date.now() + remaining).toISOString();
+
           const minutesRemaining = Math.ceil(remaining / 60000);
           progressMessage = `Deployment in progress. Estimated ${minutesRemaining} minute(s) remaining.`;
         } else if (elapsedMinutes < 10) {
@@ -220,9 +221,11 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
       // Check domain status if domainName is provided
       let domainStatus = null;
+
       if (domainName) {
         try {
           console.log(`Checking domain status for: ${domainName}`);
+
           const getDomainCommand = new GetDomainAssociationCommand({
             appId,
             domainName,

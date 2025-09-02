@@ -30,9 +30,18 @@ export default function DomainChatAlert({ alert, clearAlert, postMessage }: Doma
   ];
 
   const getStepStatus = (stepNumber: number) => {
-    if (isFailed) return 'failed';
-    if (stepNumber < currentStep) return 'complete';
-    if (stepNumber === currentStep) return 'running';
+    if (isFailed) {
+      return 'failed';
+    }
+
+    if (stepNumber < currentStep) {
+      return 'complete';
+    }
+
+    if (stepNumber === currentStep) {
+      return 'running';
+    }
+
     return 'pending';
   };
 
@@ -81,7 +90,7 @@ export default function DomainChatAlert({ alert, clearAlert, postMessage }: Doma
               className={`mt-2 text-sm text-bolt-elements-textSecondary`}
             >
               <p>{description}</p>
-              
+
               {/* Domain Name */}
               <div className="mt-2 text-xs text-bolt-elements-textTertiary">
                 Domain: <span className="font-mono text-bolt-elements-textSecondary">{domainName}</span>
@@ -93,7 +102,7 @@ export default function DomainChatAlert({ alert, clearAlert, postMessage }: Doma
                   {steps.map((step, index) => {
                     const stepStatus = getStepStatus(step.number);
                     const isLastStep = index === steps.length - 1;
-                    
+
                     return (
                       <div key={step.key} className="flex items-center flex-shrink-0">
                         {/* Step Circle */}
@@ -138,13 +147,9 @@ export default function DomainChatAlert({ alert, clearAlert, postMessage }: Doma
                     );
                   })}
                 </div>
-                
+
                 {/* Status Message */}
-                {statusMessage && (
-                  <div className="text-xs text-bolt-elements-textTertiary mt-2">
-                    {statusMessage}
-                  </div>
-                )}
+                {statusMessage && <div className="text-xs text-bolt-elements-textTertiary mt-2">{statusMessage}</div>}
               </div>
 
               {content && (
@@ -152,7 +157,7 @@ export default function DomainChatAlert({ alert, clearAlert, postMessage }: Doma
                   {content}
                 </div>
               )}
-              
+
               {url && isComplete && (
                 <div className="mt-2">
                   <a

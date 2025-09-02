@@ -195,16 +195,23 @@ export async function streamText(props: {
 
   // console.log(systemPrompt, processedMessages);
 
-  return await _streamText({
-    model: provider.getModelInstance({
-      model: modelDetails.name,
-      serverEnv,
-      apiKeys,
-      providerSettings,
-    }),
-    system: chatMode === 'build' ? systemPrompt : discussPrompt(),
-    maxTokens: dynamicMaxTokens,
-    messages: convertToCoreMessages(processedMessages as any),
-    ...options,
-  });
+  try {
+    const streamOptions = {
+      model: provider.getModelInstance({
+        model: modelDetails.name,
+        serverEnv,
+        apiKeys,
+        providerSettings,
+      }),
+      system: chatMode === 'build' ? systemPrompt : discussPrompt(),
+      maxTokens: dynamicMaxTokens,
+      messages: convertToCoreMessages(processedMessages as any),
+      ...options,
+    };
+
+    return await _streamText(streamOptions);
+  } catch (error: any) {
+    logger.error(`Error in streamText for ${provider.name}:`, error);
+    throw error;
+  }
 }

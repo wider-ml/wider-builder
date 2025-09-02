@@ -1,4 +1,5 @@
 import { MongoClient, Db, Collection } from 'mongodb';
+import { execSync } from 'child_process';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('MongoDB');
@@ -21,17 +22,26 @@ export async function connectToDatabase(context: any): Promise<Db> {
 
   try {
     if (!client) {
-      client = new MongoClient(MONGODB_URI, {
+      // Determine if we're connecting to a local MongoDB or Atlas
+      const isLocalMongoDB = MONGODB_URI.includes('mongodb://') && !MONGODB_URI.includes('mongodb.net');
+
+      const clientOptions: any = {
         maxPoolSize: 10,
         serverSelectionTimeoutMS: 10000,
         socketTimeoutMS: 0,
         connectTimeoutMS: 10000,
         maxIdleTimeMS: 0,
         retryWrites: true,
-        tls: true,
-        tlsAllowInvalidCertificates: false,
-        tlsAllowInvalidHostnames: false,
-      });
+      };
+
+      // Only add TLS options for Atlas connections
+      if (!isLocalMongoDB) {
+        clientOptions.tls = true;
+        clientOptions.tlsAllowInvalidCertificates = false;
+        clientOptions.tlsAllowInvalidHostnames = false;
+      }
+
+      client = new MongoClient(MONGODB_URI, clientOptions);
     }
 
     await client.connect();
