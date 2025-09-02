@@ -58,6 +58,7 @@ export const action: ActionFunction = async ({ request, context }) => {
     if (!response.ok) {
       const errorText = await response.text();
       logger.error(`Failed to save snapshot in Django API: ${response.status} ${response.statusText} - ${errorText}`);
+
       return json({ error: 'Failed to save snapshot' }, { status: response.status });
     }
 

@@ -19,6 +19,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
     // Validate file size (max 10MB)
     const maxSize = 10 * 1024 * 1024; // 10MB
+
     if (file.size > maxSize) {
       return json({ error: 'File size must be less than 10MB' }, { status: 400 });
     }
@@ -57,6 +58,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
       Key: fileName,
       Body: buffer,
       ContentType: file.type,
+
       //ACL: 'public-read',
     });
 

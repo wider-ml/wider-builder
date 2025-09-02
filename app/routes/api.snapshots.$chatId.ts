@@ -42,7 +42,9 @@ export const loader: LoaderFunction = async ({ request, params, context }) => {
       if (response.status === 404) {
         return json({ error: 'Snapshot not found' }, { status: 404 });
       }
+
       logger.error(`Failed to fetch snapshot from Django API: ${response.status} ${response.statusText}`);
+
       return json({ error: 'Failed to fetch snapshot' }, { status: response.status });
     }
 

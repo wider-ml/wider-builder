@@ -230,8 +230,10 @@ export async function loader({ request, context }: { request: Request; context: 
 
     let fileList;
 
-    // Always use the Cloudflare-compatible method (Contents API) as it's more reliable
-    // The zipball method often fails with 403 errors due to permission issues
+    /*
+     * Always use the Cloudflare-compatible method (Contents API) as it's more reliable
+     * The zipball method often fails with 403 errors due to permission issues
+     */
     fileList = await fetchRepoContentsCloudflare(repo, githubToken);
 
     // Filter out .git files for both methods

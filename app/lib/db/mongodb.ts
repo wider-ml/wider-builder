@@ -13,6 +13,7 @@ export async function connectToDatabase(context: any): Promise<Db> {
   }
 
   const MONGODB_URI = context?.cloudflare?.env.MONGODB_URI || process.env.MONGODB_URI;
+
   if (!MONGODB_URI) {
     logger.error('MongoDB connection string is not defined');
     throw new Error('MongoDB connection string is not defined');

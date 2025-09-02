@@ -49,6 +49,7 @@ export class AnthropicDirectProvider {
             // For generate calls, we'll use the base model but with error handling
             throw new Error(`AI generation temporarily unavailable in production: ${error.message}`);
           }
+
           throw error;
         }
       },
@@ -116,6 +117,7 @@ export class AnthropicDirectProvider {
 
       // Create a readable stream that matches AI SDK expectations
       const reader = response.body?.getReader();
+
       if (!reader) {
         throw new Error('No response body reader available');
       }
@@ -145,17 +147,20 @@ export class AnthropicDirectProvider {
                       usage: { promptTokens: 0, completionTokens: 0 },
                     } as LanguageModelV1StreamPart);
                   }
+
                   controller.close();
                   break;
                 }
 
                 buffer += new TextDecoder().decode(value);
+
                 const lines = buffer.split('\n');
                 buffer = lines.pop() || '';
 
                 for (const line of lines) {
                   if (line.startsWith('data: ')) {
                     const data = line.slice(6).trim();
+
                     if (data === '[DONE]') {
                       controller.close();
                       return;
@@ -172,6 +177,7 @@ export class AnthropicDirectProvider {
                         logger.debug('Content block started');
                       } else if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
                         hasStarted = true;
+
                         const streamPart: LanguageModelV1StreamPart = {
                           type: 'text-delta',
                           textDelta: parsed.delta.text,
@@ -183,6 +189,7 @@ export class AnthropicDirectProvider {
                         logger.debug('Message delta received');
                       } else if (parsed.type === 'message_stop') {
                         logger.debug('Message stopped, finishing stream');
+
                         const finishPart: LanguageModelV1StreamPart = {
                           type: 'finish',
                           finishReason: 'stop',
@@ -193,6 +200,7 @@ export class AnthropicDirectProvider {
                         };
                         controller.enqueue(finishPart);
                         controller.close();
+
                         return;
                       }
                     } catch (parseError) {

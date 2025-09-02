@@ -319,6 +319,7 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
       },
       onError: (error: any) => {
         logger.error('DataStream onError triggered:', error);
+
         // Don't return a custom error message, let it bubble up
         throw error;
       },
