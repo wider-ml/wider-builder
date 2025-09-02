@@ -18,6 +18,7 @@ import type { ProviderInfo } from '~/types/model';
 import type { DesignScheme } from '~/types/design-scheme';
 import type { ElementInfo } from '~/components/workbench/Inspector';
 import { uploadImageToS3 } from '~/utils/imageUpload';
+import { useUser } from '~/lib/hooks/useUser';
 
 // Removed unused imports: ColorSchemeDialog, McpTools
 
@@ -65,6 +66,7 @@ interface ChatBoxProps {
 }
 
 export const ChatBox: React.FC<ChatBoxProps> = (props) => {
+  const { user } = useUser();
   return (
     <div
       className={classNames(
@@ -300,20 +302,22 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
                 {props.chatMode === 'discuss' ? <span>Discuss</span> : <span />}
               </IconButton>
             )} */}
-            <IconButton
-              title="Model Settings"
-              className={classNames('transition-all flex items-center gap-1', {
-                'bg-bolt-elements-item-backgroundAccent text-bolt-elements-item-contentAccent':
-                  props.isModelSettingsCollapsed,
-                'bg-bolt-elements-item-backgroundDefault text-bolt-elements-item-contentDefault':
-                  !props.isModelSettingsCollapsed,
-              })}
-              onClick={() => props.setIsModelSettingsCollapsed(!props.isModelSettingsCollapsed)}
-              disabled={!props.providerList || props.providerList.length === 0}
-            >
-              <div className={`i-ph:caret-${props.isModelSettingsCollapsed ? 'right' : 'down'} text-lg`} />
-              {props.isModelSettingsCollapsed ? <span className="text-xs">{props.model}</span> : <span />}
-            </IconButton>
+            {user?.role === 'admin' && (
+              <IconButton
+                title="Model Settings"
+                className={classNames('transition-all flex items-center gap-1', {
+                  'bg-bolt-elements-item-backgroundAccent text-bolt-elements-item-contentAccent':
+                    props.isModelSettingsCollapsed,
+                  'bg-bolt-elements-item-backgroundDefault text-bolt-elements-item-contentDefault':
+                    !props.isModelSettingsCollapsed,
+                })}
+                onClick={() => props.setIsModelSettingsCollapsed(!props.isModelSettingsCollapsed)}
+                disabled={!props.providerList || props.providerList.length === 0}
+              >
+                <div className={`i-ph:caret-${props.isModelSettingsCollapsed ? 'right' : 'down'} text-lg`} />
+                {props.isModelSettingsCollapsed ? <span className="text-xs">{props.model}</span> : <span />}
+              </IconButton>
+            )}
           </div>
           {props.input.length > 3 ? (
             <div className="text-xs text-bolt-elements-textTertiary">
