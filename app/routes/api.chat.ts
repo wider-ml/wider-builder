@@ -319,8 +319,8 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
       },
       onError: (error: any) => {
         logger.error('DataStream onError triggered:', error);
-        // Don't return a custom error message, let it bubble up
-        throw error;
+        // Return error message instead of throwing to avoid unhandled promise rejection
+        return error.message || 'An unexpected error occurred';
       },
     }).pipeThrough(
       new TransformStream({

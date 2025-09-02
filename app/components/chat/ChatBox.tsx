@@ -180,17 +180,21 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
             e.currentTarget.style.border = '1px solid var(--bolt-elements-borderColor)';
 
             const files = Array.from(e.dataTransfer.files);
+
             for (const file of files) {
               if (file.type.startsWith('image/')) {
                 try {
                   toast.info('Uploading dropped image to S3...');
+
                   const uploadedImage = await uploadImageToS3(file);
                   props.setUploadedFiles?.([...props.uploadedFiles, file]);
                   props.setImageDataList?.([...props.imageDataList, uploadedImage.url]);
                   toast.success('Dropped image uploaded successfully!');
                 } catch (error) {
                   console.error('Failed to upload dropped image:', error);
-                  toast.error(`Failed to upload dropped image: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                  toast.error(
+                    `Failed to upload dropped image: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                  );
                 }
               }
             }

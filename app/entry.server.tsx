@@ -1,12 +1,10 @@
 import 'dotenv/config';
 import type { AppLoadContext } from '@remix-run/cloudflare';
 import { RemixServer } from '@remix-run/react';
-import { isbot } from 'isbot';
 import { renderToString } from 'react-dom/server';
 import { renderHeadToString } from 'remix-island';
 import { Head } from './root';
 import { themeStore } from '~/lib/stores/theme';
-
 
 export default async function handleRequest(
   request: Request,

@@ -25,7 +25,7 @@ import { filesToArtifacts } from '~/utils/fileUtils';
 import { supabaseConnection } from '~/lib/stores/supabase';
 import { defaultDesignScheme, type DesignScheme } from '~/types/design-scheme';
 import type { ElementInfo } from '~/components/workbench/Inspector';
-import type { TextUIPart, FileUIPart, Attachment } from '@ai-sdk/ui-utils';
+import type { TextUIPart, FileUIPart } from '@ai-sdk/ui-utils';
 import { useMCPStore } from '~/lib/stores/mcp';
 import type { LlmErrorAlertType } from '~/types/actions';
 
@@ -41,7 +41,7 @@ export function Chat() {
 
   const { ready, initialMessages: rawInitialMessages, storeMessageHistory, importChat, exportChat } = useChatHistory();
   const title = useStore(description);
-  
+
   // Clean up any existing messages with base64 image data
   const initialMessages = rawInitialMessages.map((message) => {
     if (message.role === 'user' && message.parts) {
@@ -51,31 +51,33 @@ export function Chat() {
         if (part.type === 'file' && 'mimeType' in part && part.mimeType.startsWith('image/')) {
           // Convert base64 image to text reference
           const base64Data = (part as any).data;
+
           if (base64Data && typeof base64Data === 'string') {
             imageUrls.push(`Base64 data - ${base64Data.substring(0, 50)}...`);
           }
+
           return false; // Remove this file part
         }
+
         return part.type === 'text';
       });
-      
+
       // Add image references to the text content if there were images
       if (imageUrls.length > 0 && textParts.length > 0) {
         const textPart = textParts[0] as any;
-        const imageReferences = imageUrls.map((imageRef, index) => 
-          `\n\n[Image ${index + 1}: ${imageRef}]`
-        ).join('');
+        const imageReferences = imageUrls.map((imageRef, index) => `\n\n[Image ${index + 1}: ${imageRef}]`).join('');
         textPart.text += imageReferences;
       }
-      
+
       return {
         ...message,
         parts: textParts,
       };
     }
+
     return message;
   });
-  
+
   useEffect(() => {
     workbenchStore.setReloadedMessages(initialMessages.map((m) => m.id));
   }, [initialMessages]);
@@ -144,7 +146,7 @@ const processStorageMessages = createSampler(
     storeMessageHistory: (messages: Message[]) => Promise<void>;
   }) => {
     const { messages, initialMessages, storeMessageHistory } = options;
-    
+
     if (messages.length > initialMessages.length) {
       storeMessageHistory(messages).catch((error) => toast.error(error.message));
     }
@@ -288,7 +290,7 @@ export const ChatImpl = memo(
         isLoading,
         parseMessages,
       });
-      
+
       // Handle API storage at 10 seconds to reduce server load
       processStorageMessages({
         messages,
@@ -427,16 +429,18 @@ export const ChatImpl = memo(
 
       // Add all images as text references in the message content
       if (images.length > 0) {
-        const imageReferences = images.map((imageUrl, index) => {
-          if (imageUrl.startsWith('https://')) {
-            // It's an S3 URL
-            return `\n\n[Image ${index + 1}: ${imageUrl}]`;
-          } else {
-            // It's base64 data, but we'll still reference it as text to avoid size limits
-            return `\n\n[Image ${index + 1}: Base64 data - ${imageUrl.substring(0, 50)}...]`;
-          }
-        }).join('');
-        
+        const imageReferences = images
+          .map((imageUrl, index) => {
+            if (imageUrl.startsWith('https://')) {
+              // It's an S3 URL
+              return `\n\n[Image ${index + 1}: ${imageUrl}]`;
+            } else {
+              // It's base64 data, but we'll still reference it as text to avoid size limits
+              return `\n\n[Image ${index + 1}: Base64 data - ${imageUrl.substring(0, 50)}...]`;
+            }
+          })
+          .join('');
+
         messageText += imageReferences;
       }
 
@@ -447,33 +451,6 @@ export const ChatImpl = memo(
           text: messageText,
         },
       ];
-    };
-
-    // Helper function to convert File[] to Attachment[] for AI SDK
-    const filesToAttachments = async (files: File[]): Promise<Attachment[] | undefined> => {
-      if (files.length === 0) {
-        return undefined;
-      }
-
-      const attachments = await Promise.all(
-        files.map(
-          (file) =>
-            new Promise<Attachment>((resolve) => {
-              const reader = new FileReader();
-
-              reader.onloadend = () => {
-                resolve({
-                  name: file.name,
-                  contentType: file.type,
-                  url: reader.result as string,
-                });
-              };
-              reader.readAsDataURL(file);
-            }),
-        ),
-      );
-
-      return attachments;
     };
 
     const sendMessage = async (_event: React.UIEvent, messageInput?: string) => {
@@ -525,7 +502,7 @@ export const ChatImpl = memo(
               const userMessageText = `[Model: ${model}]\n\n[Provider: ${provider.name}]\n\n${finalMessageContent}`;
 
               const messageParts = createMessageParts(userMessageText, imageDataList);
-              
+
               setMessages([
                 {
                   id: `1-${new Date().getTime()}`,
@@ -565,10 +542,9 @@ export const ChatImpl = memo(
 
         // If autoSelectTemplate is disabled or template selection failed, proceed with normal message
         const userMessageText = `[Model: ${model}]\n\n[Provider: ${provider.name}]\n\n${finalMessageContent}`;
-        const attachments = uploadedFiles.length > 0 ? await filesToAttachments(uploadedFiles) : undefined;
 
         const messageParts = createMessageParts(userMessageText, imageDataList);
-        
+
         setMessages([
           {
             id: `${new Date().getTime()}`,
@@ -606,13 +582,11 @@ export const ChatImpl = memo(
 
         const messageParts = createMessageParts(messageText, imageDataList);
 
-        append(
-          {
-            role: 'user',
-            content: messageText,
-            parts: messageParts,
-          },
-        );
+        append({
+          role: 'user',
+          content: messageText,
+          parts: messageParts,
+        });
 
         workbenchStore.resetAllFileModifications();
       } else {
@@ -620,13 +594,11 @@ export const ChatImpl = memo(
 
         const messageParts = createMessageParts(messageText, imageDataList);
 
-        append(
-          {
-            role: 'user',
-            content: messageText,
-            parts: messageParts,
-          },
-        );
+        append({
+          role: 'user',
+          content: messageText,
+          parts: messageParts,
+        });
       }
 
       setInput('');

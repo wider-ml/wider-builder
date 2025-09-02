@@ -41,8 +41,6 @@ export async function newShellProcess(webcontainer: WebContainer, terminal: ITer
   );
 
   terminal.onData((data) => {
-    // console.log('terminal onData', { data, isInteractive });
-
     if (isInteractive) {
       input.write(data);
     }

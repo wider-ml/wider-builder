@@ -74,6 +74,8 @@ export const action: ActionFunction = async ({ request, context }) => {
     const authHeader = request.headers.get('authorization');
     const token = authHeader?.replace('Bearer ', '');
 
+    console.log('Auth  token:', token);
+
     if (!token) {
       return json({ error: 'No authorization token provided' }, { status: 401 });
     }
