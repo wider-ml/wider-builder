@@ -93,11 +93,8 @@ export default class AnthropicProvider extends BaseProvider {
       defaultBaseUrlKey: '',
       defaultApiTokenKey: 'ANTHROPIC_API_KEY',
     });
-<<<<<<< HEAD
-=======
 
     // Use the standard AI SDK with production-safe error handling
->>>>>>> 48aace6f6a9b5df8c5077d2ab278846b011794ed
     const anthropic = createAnthropic({
       apiKey,
       headers: { 'anthropic-beta': 'output-128k-2025-02-19' },
