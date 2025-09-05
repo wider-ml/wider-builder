@@ -318,28 +318,11 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
               const error: any = part.error;
               logger.error(`${error}`);
 
-<<<<<<< HEAD
               return;
             }
           }
         })();
         result.mergeIntoDataStream(dataStream);
-=======
-          result.mergeIntoDataStream(dataStream);
-        } catch (error: any) {
-          logger.error('Error during AI API call:', {
-            message: error.message,
-            stack: error.stack,
-            response: error.response || null,
-          });
-          throw error; // Re-throw the error to be handled by the outer catch block
-        }
-      },
-      onError: (error: any) => {
-        logger.error('DataStream onError triggered:', error);
-        // Return error message instead of throwing to avoid unhandled promise rejection
-        return error.message || 'An unexpected error occurred';
->>>>>>> 48aace6f6a9b5df8c5077d2ab278846b011794ed
       },
       onError: (error: any) => `Custom error: ${error.message}`,
     }).pipeThrough(
