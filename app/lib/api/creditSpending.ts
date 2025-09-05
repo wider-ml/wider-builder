@@ -17,10 +17,7 @@ export interface CreditSpendingResponse {
 /**
  * Call the credit spending API after successful Anthropic API calls
  */
-export async function callCreditSpendingAPI(
-  baseUrl: string,
-  operationType: string = 'code_generation'
-): Promise<void> {
+export async function callCreditSpendingAPI(baseUrl: string, operationType: string = 'code_generation'): Promise<void> {
   try {
     const response = await fetch(`${baseUrl}/api/v1/subscription/credit/spend/`, {
       method: 'POST',
@@ -41,7 +38,7 @@ export async function callCreditSpendingAPI(
         console.warn('Credit spending failed:', data);
         return;
       }
-      
+
       // Handle other errors silently (don't show toast for other API errors)
       console.warn('Credit spending API error:', data);
       return;
@@ -61,6 +58,7 @@ export async function callCreditSpendingAPI(
 export function getCreditSpendingBaseUrl(serverEnv?: Record<string, string>): string | null {
   // Try to get from server environment first, then process.env
   const env = serverEnv || process.env;
-  
+
   // Look for common environment variable names for the API base URL
   return env.CREDIT_API_BASE_URL || env.API_BASE_URL || null;
+}
