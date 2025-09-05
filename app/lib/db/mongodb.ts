@@ -3,17 +3,15 @@ import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('MongoDB');
 
-const MONGODB_URI =
-  process.env.MONGODB_CONNECTION_STRING ||
-  'mongodb+srv://iamthemunna10:wider12345@munna-cluster.d248zqq.mongodb.net/wider-builder?retryWrites=true&w=majority';
-
 let client: MongoClient | null = null;
 let db: Db | null = null;
 
-export async function connectToDatabase(): Promise<Db> {
+export async function connectToDatabase(context: any): Promise<Db> {
   if (db) {
     return db;
   }
+
+  const MONGODB_URI = context?.cloudflare?.env.MONGODB_URI || process.env.MONGODB_URI;
 
   if (!MONGODB_URI) {
     logger.error('MongoDB connection string is not defined');
@@ -24,17 +22,26 @@ export async function connectToDatabase(): Promise<Db> {
 
   try {
     if (!client) {
-      client = new MongoClient(MONGODB_URI, {
-        maxPoolSize: 50,
-        serverSelectionTimeoutMS: 30000,
+      // Determine if we're connecting to a local MongoDB or Atlas
+      const isLocalMongoDB = MONGODB_URI.includes('mongodb://') && !MONGODB_URI.includes('mongodb.net');
+
+      const clientOptions: any = {
+        maxPoolSize: 10,
+        serverSelectionTimeoutMS: 10000,
         socketTimeoutMS: 0,
         connectTimeoutMS: 10000,
         maxIdleTimeMS: 0,
         retryWrites: true,
-        tls: true,
-        tlsAllowInvalidCertificates: false,
-        tlsAllowInvalidHostnames: false,
-      });
+      };
+
+      // Only add TLS options for Atlas connections
+      if (!isLocalMongoDB) {
+        clientOptions.tls = true;
+        clientOptions.tlsAllowInvalidCertificates = false;
+        clientOptions.tlsAllowInvalidHostnames = false;
+      }
+
+      client = new MongoClient(MONGODB_URI, clientOptions);
     }
 
     await client.connect();
@@ -49,14 +56,14 @@ export async function connectToDatabase(): Promise<Db> {
   }
 }
 
-export async function getChatsCollection(): Promise<Collection> {
-  const database = await connectToDatabase();
+export async function getChatsCollection(context: any): Promise<Collection> {
+  const database = await connectToDatabase(context);
 
   return database.collection('chats');
 }
 
-export async function getSnapshotsCollection(): Promise<Collection> {
-  const database = await connectToDatabase();
+export async function getSnapshotsCollection(context: any): Promise<Collection> {
+  const database = await connectToDatabase(context);
   return database.collection('snapshots');
 }
 

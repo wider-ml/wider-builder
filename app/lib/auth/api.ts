@@ -1,6 +1,9 @@
 import { axios } from '~/lib/axios/customAxios';
 
-const AUTH_ME_URL = () => `https://dev-auth.widerml.com/api/v1/auth/profile/details/?language=en`;
+const AUTH_ME_URL = () => {
+  const URL = process.env.API_AUTH_URL || 'https://auth.widerml.com';
+  return `${URL}/api/v1/auth/profile/details/?language=en`;
+};
 
 const getUser = async (): Promise<any> => {
   try {

@@ -1,0 +1,122 @@
+.MarkdownContent {
+  line-height: 1.6;
+  color: var(--bolt-elements-textPrimary);
+}
+.MarkdownContent > *:not(:last-child) {
+  margin-block-end: 16px;
+}
+.MarkdownContent :global(.artifact) {
+  margin: 1.5em 0;
+}
+.MarkdownContent :is(h1, h2, h3, h4, h5, h6):not(:has(:global(.actions)), :global(.actions *)) {
+  margin-block-start: 24px;
+  margin-block-end: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--bolt-elements-textPrimary);
+}
+.MarkdownContent h1 {
+  font-size: 2em;
+  border-bottom: 1px solid var(--bolt-elements-borderColor);
+  padding-bottom: 0.3em;
+}
+.MarkdownContent h2 {
+  font-size: 1.5em;
+  border-bottom: 1px solid var(--bolt-elements-borderColor);
+  padding-bottom: 0.3em;
+}
+.MarkdownContent h3 {
+  font-size: 1.25em;
+}
+.MarkdownContent h4 {
+  font-size: 1em;
+}
+.MarkdownContent h5 {
+  font-size: 0.875em;
+}
+.MarkdownContent h6 {
+  font-size: 0.85em;
+  color: #6a737d;
+}
+.MarkdownContent p {
+  white-space: pre-wrap;
+}
+.MarkdownContent p:not(:last-of-type) {
+  margin-block-start: 0;
+  margin-block-end: 16px;
+}
+.MarkdownContent a {
+  color: var(--bolt-elements-messages-linkColor);
+  text-decoration: none;
+  cursor: pointer;
+}
+.MarkdownContent a:hover {
+  text-decoration: underline;
+}
+.MarkdownContent :not(pre) > code {
+  font-family: ui-monospace, "Fira Code", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+}
+.MarkdownContent :not(pre) > code:not(:has(:global(.actions)), :global(.actions *)) {
+  border-radius: 6px;
+  padding: 0.2em 0.4em;
+  background-color: var(--bolt-elements-messages-inlineCode-background);
+  color: var(--bolt-elements-messages-inlineCode-text);
+}
+.MarkdownContent pre {
+  padding: 20px 16px;
+  border-radius: 6px;
+}
+.MarkdownContent pre:has(> code) {
+  font-family: ui-monospace, "Fira Code", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  background: transparent;
+  overflow-x: auto;
+  min-width: 0;
+}
+.MarkdownContent blockquote {
+  margin: 0;
+  padding: 0 1em;
+  color: var(--bolt-elements-textTertiary);
+  border-left: 0.25em solid var(--bolt-elements-borderColor);
+}
+.MarkdownContent :is(ul, ol):not(:has(:global(.actions)), :global(.actions *)) {
+  padding-left: 2em;
+  margin-block-start: 0;
+  margin-block-end: 16px;
+}
+.MarkdownContent ul:not(:has(:global(.actions)), :global(.actions *)) {
+  list-style-type: disc;
+}
+.MarkdownContent ol:not(:has(:global(.actions)), :global(.actions *)) {
+  list-style-type: decimal;
+}
+.MarkdownContent li:not(:has(:global(.actions)), :global(.actions *)) + li {
+  margin-block-start: 8px;
+}
+.MarkdownContent li:not(:has(:global(.actions)), :global(.actions *)) > *:not(:last-child) {
+  margin-block-end: 16px;
+}
+.MarkdownContent img {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.MarkdownContent hr {
+  height: 0.25em;
+  padding: 0;
+  margin: 24px 0;
+  background-color: var(--bolt-elements-borderColor);
+  border: 0;
+}
+.MarkdownContent table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-block-end: 16px;
+}
+.MarkdownContent table :is(th, td) {
+  padding: 6px 13px;
+  border: 1px solid #dfe2e5;
+}
+.MarkdownContent table tr:nth-child(2n) {
+  background-color: #f6f8fa;
+}

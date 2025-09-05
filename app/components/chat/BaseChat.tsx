@@ -34,6 +34,8 @@ import { ChatBox } from './ChatBox';
 import type { DesignScheme } from '~/types/design-scheme';
 import type { ElementInfo } from '~/components/workbench/Inspector';
 import LlmErrorAlert from './LLMApiAlert';
+import { uploadImageToS3 } from '~/utils/imageUpload';
+import { toast } from 'react-toastify';
 
 const TEXTAREA_MIN_HEIGHT = 76;
 
@@ -144,7 +146,6 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
     const [isModelSettingsCollapsed, setIsModelSettingsCollapsed] = useState(true);
     const [isListening, setIsListening] = useState(false);
     const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
-    const [transcript, setTranscript] = useState('');
     const [isModelLoading, setIsModelLoading] = useState<string | undefined>('all');
     const [progressAnnotations, setProgressAnnotations] = useState<ProgressAnnotation[]>([]);
     const expoUrl = useStore(expoUrlAtom);
@@ -164,9 +165,6 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
         setProgressAnnotations(progressList);
       }
     }, [data]);
-    useEffect(() => {
-      console.log(transcript);
-    }, [transcript]);
 
     useEffect(() => {
       onStreamingChange?.(isStreaming);
@@ -184,8 +182,6 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
             .map((result) => result[0])
             .map((result) => result.transcript)
             .join('');
-
-          setTranscript(transcript);
 
           if (handleInputChange) {
             const syntheticEvent = {
@@ -278,7 +274,6 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
 
         if (recognition) {
           recognition.abort(); // Stop current recognition
-          setTranscript(''); // Clear transcript
           setIsListening(false);
 
           // Clear the input by triggering handleInputChange with empty value
@@ -301,14 +296,17 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
         const file = (e.target as HTMLInputElement).files?.[0];
 
         if (file) {
-          const reader = new FileReader();
+          try {
+            toast.info('Uploading image to S3...');
 
-          reader.onload = (e) => {
-            const base64Image = e.target?.result as string;
+            const uploadedImage = await uploadImageToS3(file);
             setUploadedFiles?.([...uploadedFiles, file]);
-            setImageDataList?.([...imageDataList, base64Image]);
-          };
-          reader.readAsDataURL(file);
+            setImageDataList?.([...imageDataList, uploadedImage.url]);
+            toast.success('Image uploaded successfully!');
+          } catch (error) {
+            console.error('Failed to upload image:', error);
+            toast.error(`Failed to upload image: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          }
         }
       };
 
@@ -329,14 +327,17 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
           const file = item.getAsFile();
 
           if (file) {
-            const reader = new FileReader();
+            try {
+              toast.info('Uploading pasted image to S3...');
 
-            reader.onload = (e) => {
-              const base64Image = e.target?.result as string;
+              const uploadedImage = await uploadImageToS3(file);
               setUploadedFiles?.([...uploadedFiles, file]);
-              setImageDataList?.([...imageDataList, base64Image]);
-            };
-            reader.readAsDataURL(file);
+              setImageDataList?.([...imageDataList, uploadedImage.url]);
+              toast.success('Pasted image uploaded successfully!');
+            } catch (error) {
+              console.error('Failed to upload pasted image:', error);
+              toast.error(`Failed to upload pasted image: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            }
           }
 
           break;

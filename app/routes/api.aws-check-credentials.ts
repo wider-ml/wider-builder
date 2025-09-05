@@ -1,10 +1,11 @@
-import { json } from '@remix-run/cloudflare';
+import { json, type LoaderFunction } from '@remix-run/cloudflare';
 
-export async function loader() {
+export const loader: LoaderFunction = async ({ context }) => {
   try {
-    // Check if AWS credentials are available in environment variables
-    const hasCredentials = !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY);
-    const region = process.env.AWS_REGION || 'us-east-1';
+    // Check if AWS credentials are available in Cloudflare context or environment variables
+    const env = (context.cloudflare?.env as any) || process.env;
+    const hasCredentials = !!(env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY);
+    const region = env.AWS_REGION || 'us-east-1';
 
     return json({
       hasCredentials,
@@ -17,4 +18,4 @@ export async function loader() {
       region: 'us-east-1',
     });
   }
-}
+};

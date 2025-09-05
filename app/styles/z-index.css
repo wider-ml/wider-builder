@@ -1,0 +1,31 @@
+.z-logo {
+  z-index: 998;
+}
+
+.z-sidebar {
+  z-index: 997;
+}
+
+.z-port-dropdown {
+  z-index: 996;
+}
+
+.z-iframe-overlay {
+  z-index: 995;
+}
+
+.z-prompt {
+  z-index: 2;
+}
+
+.z-workbench {
+  z-index: 3;
+}
+
+.z-file-tree-breadcrumb {
+  z-index: 998;
+}
+
+.z-max {
+  z-index: 999;
+}

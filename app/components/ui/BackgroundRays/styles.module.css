@@ -1,0 +1,14 @@
+.rayContainer {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  animation: fadeIn 1.5s ease-out;
+  pointer-events: none;
+  z-index: 0, 1;
+}
+:global(html[data-theme="dark"]) .rayContainer {
+  background-color: #000000;
+}
+:global(html[data-theme="light"]) .rayContainer {
+  background-color: #f4f4fb;
+}

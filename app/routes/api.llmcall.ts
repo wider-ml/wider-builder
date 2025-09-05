@@ -126,8 +126,7 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
         ],
         model: providerInfo.getModelInstance({
           model: modelDetails.name,
-          serverEnv:
-            (context.cloudflare?.env as unknown as Record<string, string>) || (process.env as Record<string, string>),
+          serverEnv: context.cloudflare?.env || (process.env as any),
           apiKeys,
           providerSettings,
         }),

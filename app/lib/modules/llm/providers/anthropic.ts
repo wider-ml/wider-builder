@@ -75,7 +75,7 @@ export default class AnthropicProvider extends BaseProvider {
       name: m.id,
       label: `${m.display_name}`,
       provider: this.name,
-      maxTokenAllowed: 32000,
+      maxTokenAllowed: 64000,
     }));
   }
 
@@ -93,11 +93,24 @@ export default class AnthropicProvider extends BaseProvider {
       defaultBaseUrlKey: '',
       defaultApiTokenKey: 'ANTHROPIC_API_KEY',
     });
+<<<<<<< HEAD
+=======
+
+    // Use the standard AI SDK with production-safe error handling
+>>>>>>> 48aace6f6a9b5df8c5077d2ab278846b011794ed
     const anthropic = createAnthropic({
       apiKey,
       headers: { 'anthropic-beta': 'output-128k-2025-02-19' },
     });
 
-    return anthropic(model);
+    const baseModel = anthropic(model);
+
+    // In production, wrap with error handling but still use AI SDK for proper streaming
+    // if (process.env.NODE_ENV === 'production') {
+    //   const directProvider = new AnthropicDirectProvider(apiKey);
+    //   return directProvider.getModelInstance(model);
+    // }
+
+    return baseModel;
   };
 }
