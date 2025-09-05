@@ -8,6 +8,7 @@ import { LLMManager } from '~/lib/modules/llm/manager';
 import type { ModelInfo } from '~/lib/modules/llm/types';
 import { getApiKeysFromCookie, getProviderSettingsFromCookie } from '~/lib/api/cookies';
 import { createScopedLogger } from '~/utils/logger';
+import { spendCredits } from '~/lib/services/creditService';
 
 export async function action(args: ActionFunctionArgs) {
   return llmCallAction(args);
@@ -71,6 +72,26 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
         providerSettings,
       });
 
+      // Call credit spending API for successful Anthropic API calls (streaming)
+      console.log('🔥 api.llmcall (streaming) - providerName:', providerName);
+      if (providerName === 'Anthropic') {
+        console.log('🔥 api.llmcall (streaming) - Calling spendCredits for Anthropic');
+        try {
+          const authHeader = request.headers.get('authorization');
+          const token = authHeader?.replace('Bearer ', '');
+          console.log('🔥 api.llmcall (streaming) - authHeader:', !!authHeader, 'token:', !!token);
+          await spendCredits(
+            (context.cloudflare?.env as unknown as Record<string, string>) || (process.env as Record<string, string>),
+            token,
+          );
+        } catch (creditError) {
+          // Log but don't fail the request if credit spending fails
+          logger.warn('❌ Credit spending API call failed (streaming):', creditError);
+        }
+      } else {
+        console.log('🔥 api.llmcall (streaming) - Not Anthropic, skipping credit spending');
+      }
+
       return new Response(result.textStream, {
         status: 200,
         headers: {
@@ -126,8 +147,7 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
         ],
         model: providerInfo.getModelInstance({
           model: modelDetails.name,
-          serverEnv:
-            (context.cloudflare?.env as unknown as Record<string, string>) || (process.env as Record<string, string>),
+          serverEnv: context.cloudflare?.env || (process.env as any),
           apiKeys,
           providerSettings,
         }),
@@ -135,6 +155,26 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
         toolChoice: 'none',
       });
       logger.info(`Generated response`);
+
+      // Call credit spending API for successful Anthropic API calls
+      console.log('🔥 api.llmcall (non-streaming) - providerName:', providerName);
+      if (providerName === 'Anthropic') {
+        console.log('🔥 api.llmcall (non-streaming) - Calling spendCredits for Anthropic');
+        try {
+          const authHeader = request.headers.get('authorization');
+          const token = authHeader?.replace('Bearer ', '');
+          console.log('🔥 api.llmcall (non-streaming) - authHeader:', !!authHeader, 'token:', !!token);
+          await spendCredits(
+            (context.cloudflare?.env as unknown as Record<string, string>) || (process.env as Record<string, string>),
+            token,
+          );
+        } catch (creditError) {
+          // Log but don't fail the request if credit spending fails
+          logger.warn('❌ Credit spending API call failed (non-streaming):', creditError);
+        }
+      } else {
+        console.log('🔥 api.llmcall (non-streaming) - Not Anthropic, skipping credit spending');
+      }
 
       return new Response(JSON.stringify(result), {
         status: 200,

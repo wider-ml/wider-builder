@@ -1,5 +1,4 @@
 import { MongoClient, Db, Collection } from 'mongodb';
-import { execSync } from 'child_process';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('MongoDB');

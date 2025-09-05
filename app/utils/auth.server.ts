@@ -40,14 +40,15 @@ export function extractUserIdFromRequest(request: Request): string {
   }
 }
 
-export async function requireAuth(request: Request) {
+export async function requireAuth(request: Request, context: any) {
   const cookies = parseCookies(request.headers.get('Cookie'));
-  const accessToken = cookies.wider_shared_access_token || cookies.wider_access_token;
-  const refreshToken = cookies.wider_shared_refresh_token;
+  const accessToken = cookies.wider_access_token || cookies.wider_shared_access_token;
+  const refreshToken = cookies.wider_access_token || cookies.wider_shared_refresh_token;
+  const widerAppUrl = process.env.WIDER_APP_URL || context?.cloudflare?.env.WIDER_APP_URL;
+  const builderAppUrl = process.env.OWN_APP_URL || context?.cloudflare?.env.OWN_APP_URL;
 
   if (!accessToken) {
-    const URL = process.env.WIDER_APP_URL || 'https://app.widerml.com';
-    throw redirect(`${URL}/en/auth/sign-in?next=builder.widerml.com`); // redirect if no token
+    throw redirect(`${widerAppUrl}/en/auth/sign-in?next=${builderAppUrl}`); // redirect if no token
   }
 
   return { accessToken, refreshToken };

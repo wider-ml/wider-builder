@@ -76,7 +76,7 @@ export default class AnthropicProvider extends BaseProvider {
       name: m.id,
       label: `${m.display_name}`,
       provider: this.name,
-      maxTokenAllowed: 32000,
+      maxTokenAllowed: 64000,
     }));
   }
 
@@ -103,10 +103,10 @@ export default class AnthropicProvider extends BaseProvider {
     const baseModel = anthropic(model);
 
     // In production, wrap with error handling but still use AI SDK for proper streaming
-    if (process.env.NODE_ENV === 'production') {
-      const directProvider = new AnthropicDirectProvider(apiKey);
-      return directProvider.getModelInstance(model);
-    }
+    // if (process.env.NODE_ENV === 'production') {
+    //   const directProvider = new AnthropicDirectProvider(apiKey);
+    //   return directProvider.getModelInstance(model);
+    // }
 
     return baseModel;
   };

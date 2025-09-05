@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import type { AppLoadContext } from '@remix-run/cloudflare';
 import { RemixServer } from '@remix-run/react';
-import { isbot } from 'isbot';
 import { renderToString } from 'react-dom/server';
 import { renderHeadToString } from 'remix-island';
 import { Head } from './root';

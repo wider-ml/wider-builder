@@ -1,5 +1,6 @@
 // see https://docs.anthropic.com/en/docs/about-claude/models
-export const MAX_TOKENS = 8000;
+// Updated to maximum allowed tokens for Anthropic Claude models (200k tokens)
+export const MAX_TOKENS = 60000;
 
 // limits the number of model responses that can be returned in a single request
 export const MAX_RESPONSE_SEGMENTS = 2;

@@ -17,8 +17,8 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export async function loader({ request }: LoaderFunctionArgs) {
-  const { accessToken, refreshToken } = await requireAuth(request);
+export async function loader({ request, context }: LoaderFunctionArgs) {
+  const { accessToken, refreshToken } = await requireAuth(request, context);
 
   return {
     accessToken,
