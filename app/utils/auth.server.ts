@@ -42,7 +42,7 @@ export function extractUserIdFromRequest(request: Request): string {
 
 export async function requireAuth(request: Request) {
   const cookies = parseCookies(request.headers.get('Cookie'));
-  const accessToken = cookies.wider_shared_access_token;
+  const accessToken = cookies.wider_shared_access_token || cookies.wider_access_token;
   const refreshToken = cookies.wider_shared_refresh_token;
 
   if (!accessToken) {
