@@ -1,23 +1,4 @@
-// import { redirect } from '@remix-run/node';
-
-/*
- * async function verifyToken(token: string) {
- *   const AUTH_URL = process.env.API_AUTH_URL;
- *   const mainURL = `${AUTH_URL}/api/v1/auth/profile/details/?language=en}`;
- *   const res = await fetch(mainURL, {
- *     headers: { Authorization: `Bearer ${token}` },
- *   });
- */
-
-/*
- *   console.log('Token verification response:', res.status, res.statusText);
- *   console.log('res okat:', res.ok);
- */
-
-/*
- *   return res.ok;
- * }
- */
+import { redirect } from '@remix-run/node';
 
 function parseCookies(cookieHeader: string | null) {
   const cookies: Record<string, string> = {};
@@ -60,31 +41,14 @@ export function extractUserIdFromRequest(request: Request): string {
 }
 
 export async function requireAuth(request: Request) {
-  const access =
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzU2MjI2NDIwLCJpYXQiOjE3NTU2MjE2MjAsImp0aSI6IjdkMmU2ZmRhMWYxZjRmODRiNmJjZDBhZWYwYmFiM2ExIiwidXNlcl9pZCI6ImZjZDg1OWE5LTZkM2QtNDk1My04NGU4LWU4NjA5NzE4ZDAwNiIsImhhc2hfcGFzc3dvcmQiOiI5ODkwN0FBMUU2NTkwNkFBNDlBM0Y5QUE1MEY0QjE5MSIsInV1aWQiOiJmY2Q4NTlhOS02ZDNkLTQ5NTMtODRlOC1lODYwOTcxOGQwMDYiLCJlbWFpbCI6ImlhbXRoZW11bm5hMTBAZ21haWwuY29tIiwibmFtZSI6IiIsImdyb3VwIjoiVXNlciIsImNvbXBhbnlfdXVpZCI6IiJ9.FPAXwWfi-A-r4hUkp-nwCgnhjpbNeJ1BTf7aZ-YkUCE';
-  const refresh =
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc1ODIxMzYyMCwiaWF0IjoxNzU1NjIxNjIwLCJqdGkiOiJjZjM4MGNmNjY2ZmQ0MWZiODg3ZjYxZDc1MGJjNzk4OCIsInVzZXJfaWQiOiJmY2Q4NTlhOS02ZDNkLTQ5NTMtODRlOC1lODYwOTcxOGQwMDYiLCJoYXNoX3Bhc3N3b3JkIjoiOTg5MDdBQTFFNjU5MDZBQTQ5QTNGOUFBNTBGNEIxOTEiLCJ1dWlkIjoiZmNkODU5YTktNmQzZC00OTUzLTg0ZTgtZTg2MDk3MThkMDA2IiwiZW1haWwiOiJpYW10aGVtdW5uYTEwQGdtYWlsLmNvbSIsIm5hbWUiOiIiLCJncm91cCI6IlVzZXIiLCJjb21wYW55X3V1aWQiOiIifQ.RpAAXlJKYDj0-kkhLmvTjNapxvyMVkqc4yfso4Wx4Q4';
-
   const cookies = parseCookies(request.headers.get('Cookie'));
-  const accessToken = cookies.wider_shared_access_token || access;
-  const refreshToken = cookies.wider_shared_refresh_token || refresh;
+  const accessToken = cookies.wider_shared_access_token || cookies.wider_access_token;
+  const refreshToken = cookies.wider_shared_refresh_token;
 
-  /*
-   * if (!accessToken) {
-   *   const URL = process.env.WIDER_APP_URL || 'https://dev.widerml.com';
-   *   throw redirect(`${URL}/en/auth/sign-in?next=builder.widerml.com`); // redirect if no token
-   * }
-   */
-
-  // Optional: verify token with your backend API
-
-  // const isValid = await verifyToken(accessToken);
-
-  /*
-   * if (!isValid) {
-   *   throw redirect(`${URL}//en/auth/sign-in`); // redirect if not valid
-   * }
-   */
+  if (!accessToken) {
+    const URL = process.env.WIDER_APP_URL || 'https://app.widerml.com';
+    throw redirect(`${URL}/en/auth/sign-in?next=builder.widerml.com`); // redirect if no token
+  }
 
   return { accessToken, refreshToken };
 }
