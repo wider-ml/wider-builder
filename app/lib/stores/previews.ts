@@ -75,7 +75,7 @@ export class PreviewsStore {
   private _getTabId(): string {
     if (typeof window !== 'undefined') {
       if (!window._tabId) {
-        window._tabId = Math.random().toString(36).substring(2, 15);
+        window._tabId = crypto.randomUUID();
       }
 
       return window._tabId;

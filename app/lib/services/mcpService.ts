@@ -6,8 +6,12 @@ import {
   convertToCoreMessages,
   formatDataStreamPart,
 } from 'ai';
+<<<<<<< HEAD
+import { Experimental_StdioMCPTransport } from 'ai/mcp-stdio';
+=======
 
 // import { Experimental_StdioMCPTransport } from 'ai/mcp-stdio';
+>>>>>>> 48aace6f6a9b5df8c5077d2ab278846b011794ed
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { z } from 'zod';
 import type { ToolCallAnnotation } from '~/types/context';
@@ -201,13 +205,16 @@ export class MCPService {
       `Creating STDIO client for '${serverName}' with command: '${config.command}' ${config.args?.join(' ') || ''}`,
     );
 
-    // Temporarily disabled due to AI SDK version compatibility
-    throw new Error('STDIO MCP transport is temporarily unavailable due to AI SDK version compatibility');
+    const client = await experimental_createMCPClient({ transport: new Experimental_StdioMCPTransport(config) });
 
+<<<<<<< HEAD
+    return Object.assign(client, { serverName });
+=======
     /*
      * const client = await experimental_createMCPClient({ transport: new Experimental_StdioMCPTransport(config) });
      * return Object.assign(client, { serverName });
      */
+>>>>>>> 48aace6f6a9b5df8c5077d2ab278846b011794ed
   }
 
   private _registerTools(serverName: string, tools: ToolSet) {

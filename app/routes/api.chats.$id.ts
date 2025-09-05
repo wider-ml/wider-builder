@@ -41,7 +41,7 @@ export const loader: LoaderFunction = async ({ request, params, context }) => {
     }
 
     // Fetch specific web project by chat_id from Django API
-    const response = await fetch(`${API_ROOT_URL}/api/v1/web-projects/?chat_id=${id}`, {
+    const response = await fetch(`${API_ROOT_URL}/api/v1/web-projects/${id}/`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -60,24 +60,25 @@ export const loader: LoaderFunction = async ({ request, params, context }) => {
       return json({ error: 'Failed to fetch chat' }, { status: response.status });
     }
 
-    const webProjects = (await response.json()) as any[];
+    const webProjects = (await response.json()) as any;
 
-    // Find the project with matching chat_id
-    const project = webProjects.find((p: any) => p.chat_id === id);
+    console.log('Fetched webProjects:', webProjects);
+    console.log('Searching for chat_id:', id);
 
-    if (!project) {
+    // Directly access the project if webProjects is an object
+    if (webProjects.chat_id !== id) {
       return json({ error: 'Chat not found' }, { status: 404 });
     }
 
     // Convert Django WebProject format to ChatDocument format
     const chatData = {
-      id: project.chat_id,
+      id: webProjects.chat_id,
       userId,
-      urlId: project.chat_id,
-      description: project.title,
-      messages: project.chat_data?.messages || [],
-      timestamp: project.created_at || new Date().toISOString(),
-      metadata: project.chat_data?.metadata,
+      urlId: webProjects.chat_id,
+      description: webProjects.title,
+      messages: webProjects.chat_data?.messages || [],
+      timestamp: webProjects.created_at || new Date().toISOString(),
+      metadata: webProjects.chat_data?.metadata,
     };
 
     return json(chatData);
