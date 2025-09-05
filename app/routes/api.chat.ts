@@ -287,6 +287,17 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
 
             result.mergeIntoDataStream(dataStream);
 
+            (async () => {
+              for await (const part of result.fullStream) {
+                if (part.type === 'error') {
+                  const error: any = part.error;
+                  logger.error(`${error}`);
+
+                  return;
+                }
+              }
+            })();
+
             return;
           },
         };
@@ -299,46 +310,35 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
           message: 'Generating Response',
         } satisfies ProgressAnnotation);
 
-        try {
-          console.log('🔥 api.chat (main call) - accessToken:', !!accessToken);
+        const result = await streamText({
+          messages: [...processedMessages],
+          env: context.cloudflare?.env,
+          options,
+          apiKeys,
+          files,
+          providerSettings,
+          promptId,
+          contextOptimization,
+          contextFiles: filteredFiles,
+          chatMode,
+          designScheme,
+          summary,
+          messageSliceId,
+        });
 
-          const result = await streamText({
-            messages: [...processedMessages],
-            env: context.cloudflare?.env,
-            options,
-            apiKeys,
-            files,
-            providerSettings,
-            promptId,
-            contextOptimization,
-            contextFiles: filteredFiles,
-            chatMode,
-            designScheme,
-            summary,
-            messageSliceId,
-            authToken: accessToken,
-          });
+        (async () => {
+          for await (const part of result.fullStream) {
+            if (part.type === 'error') {
+              const error: any = part.error;
+              logger.error(`${error}`);
 
-          if (!result || !result.fullStream) {
-            logger.error('Invalid response from AI API', { result });
-            throw new Error('Invalid response from AI API');
+              return;
+            }
           }
-
-          result.mergeIntoDataStream(dataStream);
-        } catch (error: any) {
-          logger.error('Error during AI API call:', {
-            message: error.message,
-            stack: error.stack,
-            response: error.response || null,
-          });
-          throw error; // Re-throw the error to be handled by the outer catch block
-        }
+        })();
+        result.mergeIntoDataStream(dataStream);
       },
-      onError: (error: any) => {
-        logger.error('DataStream onError triggered:', error);
-        // Return error message instead of throwing to avoid unhandled promise rejection
-        return error.message || 'An unexpected error occurred';
-      },
+      onError: (error: any) => `Custom error: ${error.message}`,
     }).pipeThrough(
       new TransformStream({
         transform: (chunk, controller) => {
