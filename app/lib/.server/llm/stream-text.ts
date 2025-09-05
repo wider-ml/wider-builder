@@ -10,6 +10,7 @@ import { createScopedLogger } from '~/utils/logger';
 import { createFilesContext, extractPropertiesFromMessage } from './utils';
 import { discussPrompt } from '~/lib/common/prompts/discuss-prompt';
 import type { DesignScheme } from '~/types/design-scheme';
+import { spendCredits } from '~/lib/services/creditService';
 
 export type Messages = Message[];
 
@@ -48,6 +49,7 @@ export async function streamText(props: {
   messageSliceId?: number;
   chatMode?: 'discuss' | 'build';
   designScheme?: DesignScheme;
+  authToken?: string;
 }) {
   const {
     messages,
@@ -195,16 +197,39 @@ export async function streamText(props: {
 
   // console.log(systemPrompt, processedMessages);
 
-  return await _streamText({
-    model: provider.getModelInstance({
-      model: modelDetails.name,
-      serverEnv,
-      apiKeys,
-      providerSettings,
-    }),
-    system: chatMode === 'build' ? systemPrompt : discussPrompt(),
-    maxTokens: dynamicMaxTokens,
-    messages: convertToCoreMessages(processedMessages as any),
-    ...options,
-  });
+  try {
+    const streamOptions = {
+      model: provider.getModelInstance({
+        model: modelDetails.name,
+        serverEnv,
+        apiKeys,
+        providerSettings,
+      }),
+      system: chatMode === 'build' ? systemPrompt : discussPrompt(),
+      maxTokens: dynamicMaxTokens,
+      messages: convertToCoreMessages(processedMessages as any),
+      ...options,
+    };
+
+    const result = await _streamText(streamOptions);
+
+    // Call credit spending API for successful Anthropic API calls
+    console.log('🔥 streamText - currentProvider:', currentProvider, 'props.authToken:', !!props.authToken);
+    if (currentProvider === 'Anthropic') {
+      console.log('🔥 streamText - Calling spendCredits for Anthropic');
+      try {
+        await spendCredits(serverEnv as unknown as Record<string, string>, props.authToken);
+      } catch (creditError) {
+        // Log but don't fail the request if credit spending fails
+        logger.warn('Credit spending API call failed in streamText:', creditError);
+      }
+    } else {
+      console.log('🔥 streamText - Not Anthropic, skipping credit spending');
+    }
+
+    return result;
+  } catch (error: any) {
+    logger.error(`Error in streamText for ${provider.name}:`, error);
+    throw error;
+  }
 }

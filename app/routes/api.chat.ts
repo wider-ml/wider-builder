@@ -13,6 +13,7 @@ import { createSummary } from '~/lib/.server/llm/create-summary';
 import { extractPropertiesFromMessage } from '~/lib/.server/llm/utils';
 import type { DesignScheme } from '~/types/design-scheme';
 import { MCPService } from '~/lib/services/mcpService';
+import { requireAuth } from '~/utils/auth.server';
 
 export async function action(args: ActionFunctionArgs) {
   return chatAction(args);
@@ -57,6 +58,18 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
       };
       maxLLMSteps: number;
     }>();
+
+  // Get access token from cookies for credit spending API
+  let accessToken: string | undefined;
+  try {
+    const auth = await requireAuth(request, context);
+    accessToken = auth.accessToken;
+    console.log('🔥 api.chat - accessToken from cookies:', !!accessToken);
+  } catch (error) {
+    // If auth fails, we'll continue without the token (credit spending will be skipped)
+    console.log('🔥 api.chat - auth failed, continuing without token:', error);
+    accessToken = undefined;
+  }
 
   const cookieHeader = request.headers.get('Cookie');
   const apiKeys = JSON.parse(parseCookies(cookieHeader || '').apiKeys || '{}');
@@ -269,6 +282,7 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
               designScheme,
               summary,
               messageSliceId,
+              authToken: accessToken,
             });
 
             result.mergeIntoDataStream(dataStream);
