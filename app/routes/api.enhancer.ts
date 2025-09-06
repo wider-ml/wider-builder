@@ -68,6 +68,8 @@ async function enhancerAction({ context, request }: ActionFunctionArgs) {
             - Focus on what the user should provide
             - Use a standard template for consistency
 
+            CRITICAL: You must respond in the SAME LANGUAGE as the original prompt. If the user writes in French, respond in French. If they write in English, respond in English. If they write in any other language, respond in that same language. Do not translate or change the language.
+
             IMPORTANT: Your response must ONLY contain the enhanced prompt text.
             Do not include any explanations, metadata, or wrapper tags.
 
@@ -82,7 +84,7 @@ async function enhancerAction({ context, request }: ActionFunctionArgs) {
       providerSettings,
       options: {
         system:
-          'You are a senior software principal architect, you should help the user analyse the user query and enrich it with the necessary context and constraints to make it more specific, actionable, and effective. You should also ensure that the prompt is self-contained and uses professional language. Your response should ONLY contain the enhanced prompt text. Do not include any explanations, metadata, or wrapper tags.',
+          'You are a senior software principal architect, you should help the user analyse the user query and enrich it with the necessary context and constraints to make it more specific, actionable, and effective. You should also ensure that the prompt is self-contained and uses professional language. CRITICAL: You must respond in the SAME LANGUAGE as the original prompt. Your response should ONLY contain the enhanced prompt text. Do not include any explanations, metadata, or wrapper tags.',
 
         /*
          * onError: (event) => {
