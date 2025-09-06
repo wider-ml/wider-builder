@@ -1,7 +1,7 @@
 import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import en from './locale/en.json';
-import fr from './locale/fr.json';
+import en from './locales/en.json';
+import fr from './locales/fr.json';
 
 export function createServerI18n() {
   const instance = i18next.createInstance();

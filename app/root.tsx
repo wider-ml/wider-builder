@@ -14,6 +14,9 @@ import reactToastifyStyles from 'react-toastify/dist/ReactToastify.css?url';
 import globalStyles from './styles/index.scss?url';
 import xtermStyles from '@xterm/xterm/css/xterm.css?url';
 
+import { I18nextProvider } from 'react-i18next';
+import i18n from './i18n';
+
 import 'virtual:uno.css';
 
 export const links: LinksFunction = () => [
@@ -96,8 +99,10 @@ export default function App() {
   }, []);
 
   return (
-    <Layout>
-      <Outlet />
-    </Layout>
+    <I18nextProvider i18n={i18n}>
+      <Layout>
+        <Outlet />
+      </Layout>
+    </I18nextProvider>
   );
 }
