@@ -1,15 +1,18 @@
 import React from 'react';
-
-const EXAMPLE_PROMPTS = [
-  { text: 'Create a mobile app about Wider ML' },
-  { text: 'Build a todo app in React using Tailwind' },
-  { text: 'Build a simple blog using Astro' },
-  { text: 'Create a cookie consent form using Material UI' },
-  { text: 'Make a space invaders game' },
-  { text: 'Make a Tic Tac Toe game in html, css and js only' },
-];
+import { useTranslation } from 'react-i18next';
 
 export function ExamplePrompts(sendMessage?: { (event: React.UIEvent, messageInput?: string): void | undefined }) {
+  const { t } = useTranslation();
+
+  const EXAMPLE_PROMPTS = [
+    { text: t('example_prompts.one') },
+    { text: t('example_prompts.two') },
+    { text: t('example_prompts.three') },
+    { text: t('example_prompts.four') },
+    { text: t('example_prompts.five') },
+    { text: t('example_prompts.six') },
+  ];
+
   return (
     <div id="examples" className="relative flex flex-col gap-9 w-full max-w-3xl mx-auto flex justify-center mt-6">
       <div

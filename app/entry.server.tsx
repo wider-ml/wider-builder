@@ -5,6 +5,8 @@ import { renderToString } from 'react-dom/server';
 import { renderHeadToString } from 'remix-island';
 import { Head } from './root';
 import { themeStore } from '~/lib/stores/theme';
+import { I18nextProvider } from 'react-i18next';
+import { createServerI18n } from './i18n.server';
 
 export default async function handleRequest(
   request: Request,
@@ -15,8 +17,14 @@ export default async function handleRequest(
 ) {
   // await initializeModelList({});
 
+  const i18n = createServerI18n();
+
   const head = renderHeadToString({ request, remixContext, Head });
-  const body = renderToString(<RemixServer context={remixContext} url={request.url} />);
+  const body = renderToString(
+    <I18nextProvider i18n={i18n}>
+      <RemixServer context={remixContext} url={request.url} />
+    </I18nextProvider>,
+  );
 
   const html = `<!DOCTYPE html><html lang="en" data-theme="${themeStore.value}"><head>${head}</head><body><div id="root" class="w-full h-full">${body}</div></body></html>`;
 

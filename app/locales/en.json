@@ -1,0 +1,13 @@
+{
+  "hello": "Hello",
+  "welcome_message": "Welcome to our application!",
+  "example_prompts": {
+    "one": "Create a mobile app about Wider ML",
+    "two": "Build a todo app in React using Tailwind",
+    "three": "Build a simple blog using Astro",
+    "four": "Create a cookie consent form using Material UI",
+    "five": "Make a space invaders game",
+    "six": "Make a Tic Tac Toe game in html, css and js only",
+    "start_blank_chat_with_your favorite_stack": "or start a blank app with your favorite stack"
+  }
+}
