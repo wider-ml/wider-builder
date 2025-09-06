@@ -15,7 +15,7 @@ i18n
       fr: { translation: fr },
     },
     fallbackLng: 'en',
-    debug: false, // set to true for debugging on console
+    debug: true, // set to true for debugging on console
     interpolation: { escapeValue: false },
 
     /*
