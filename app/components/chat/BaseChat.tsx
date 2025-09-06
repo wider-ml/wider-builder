@@ -491,7 +491,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                   <GitCloneButton importChat={importChat} />
                 </div>
               )}
-              <div className="flex flex-col gap-5">
+              {/* <div className="flex flex-col gap-5">
                 {!chatStarted &&
                   ExamplePrompts((event, messageInput) => {
                     if (isStreaming) {
@@ -502,6 +502,17 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                     handleSendMessage?.(event, messageInput);
                   })}
                 {!chatStarted && <StarterTemplates />}
+              </div> */}
+              <div className={classNames({ hidden: chatStarted })}>
+                {ExamplePrompts((event, messageInput) => {
+                  if (isStreaming) {
+                    handleStop?.();
+                    return;
+                  }
+
+                  handleSendMessage?.(event, messageInput);
+                })}
+                <StarterTemplates />
               </div>
             </div>
           </div>
