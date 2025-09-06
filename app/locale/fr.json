@@ -1,0 +1,13 @@
+{
+  "hello": "Bonjour",
+  "welcome_message": "Bienvenue sur notre application !",
+  "example_prompts": {
+    "one": "Créer une application mobile sur Wider ML",
+    "two": "Créez une application de tâches en React avec Tailwind",
+    "three": "Créez un blog simple avec Astro",
+    "four": "Créer un formulaire de consentement aux cookies à l'aide de Material UI",
+    "five": "Créez un jeu Space Invaders",
+    "six": "Créez un jeu de morpion en HTML, CSS et JS uniquement",
+    "start_blank_chat_with_your favorite_stack": "ou démarrez une application vierge avec votre pile préférée"
+  }
+}
