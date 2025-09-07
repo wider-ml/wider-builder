@@ -26,12 +26,13 @@ async function getModelList(options: {
 const logger = createScopedLogger('api.llmcall');
 
 async function llmCallAction({ context, request }: ActionFunctionArgs) {
-  const { system, message, model, provider, streamOutput } = await request.json<{
+  const { system, message, model, provider, streamOutput, isCodeGeneration } = await request.json<{
     system: string;
     message: string;
     model: string;
     provider: ProviderInfo;
     streamOutput?: boolean;
+    isCodeGeneration?: boolean;
   }>();
 
   const { name: providerName } = provider;
@@ -52,6 +53,7 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
   }
 
   const cookieHeader = request.headers.get('Cookie');
+  const authHeader = request.headers.get('authorization');
   const apiKeys = getApiKeysFromCookie(cookieHeader);
   const providerSettings = getProviderSettingsFromCookie(cookieHeader);
 
@@ -72,10 +74,9 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
         providerSettings,
       });
 
-      // Call credit spending API for successful Anthropic API calls (streaming)
-      console.log('🔥 api.llmcall (streaming) - providerName:', providerName);
-      if (providerName === 'Anthropic') {
-        console.log('🔥 api.llmcall (streaming) - Calling spendCredits for Anthropic');
+      // Call credit spending API for successful Anthropic API calls (streaming) - only for code generation
+      if (providerName === 'Anthropic' && isCodeGeneration) {
+        console.log('🔥 api.llmcall (streaming) - Calling spendCredits for Anthropic code generation');
         try {
           const authHeader = request.headers.get('authorization');
           const token = authHeader?.replace('Bearer ', '');
@@ -89,7 +90,7 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
           logger.warn('❌ Credit spending API call failed (streaming):', creditError);
         }
       } else {
-        console.log('🔥 api.llmcall (streaming) - Not Anthropic, skipping credit spending');
+        console.log('🔥 api.llmcall (streaming) - Skipping credit spending (not Anthropic code generation)');
       }
 
       return new Response(result.textStream, {
@@ -156,10 +157,15 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
       });
       logger.info(`Generated response`);
 
-      // Call credit spending API for successful Anthropic API calls
-      console.log('🔥 api.llmcall (non-streaming) - providerName:', providerName);
-      if (providerName === 'Anthropic') {
-        console.log('🔥 api.llmcall (non-streaming) - Calling spendCredits for Anthropic');
+      // Call credit spending API for successful Anthropic API calls - only for code generation
+      console.log(
+        '🔥 api.llmcall (non-streaming) - providerName:',
+        providerName,
+        'isCodeGeneration:',
+        isCodeGeneration,
+      );
+      if (providerName === 'Anthropic' && isCodeGeneration) {
+        console.log('🔥 api.llmcall (non-streaming) - Calling spendCredits for Anthropic code generation');
         try {
           const authHeader = request.headers.get('authorization');
           const token = authHeader?.replace('Bearer ', '');
@@ -173,7 +179,7 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
           logger.warn('❌ Credit spending API call failed (non-streaming):', creditError);
         }
       } else {
-        console.log('🔥 api.llmcall (non-streaming) - Not Anthropic, skipping credit spending');
+        console.log('🔥 api.llmcall (non-streaming) - Skipping credit spending (not Anthropic code generation)');
       }
 
       return new Response(JSON.stringify(result), {

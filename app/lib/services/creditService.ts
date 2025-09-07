@@ -19,7 +19,6 @@ export interface CreditSpendResponse {
  */
 export async function spendCredits(serverEnv?: Record<string, string>, authToken?: string): Promise<void> {
   console.log('🔍 [DEBUG] spendCredits function called');
-  console.log('🔍 [DEBUG] serverEnv keys:', serverEnv ? Object.keys(serverEnv) : 'undefined');
   console.log('🔍 [DEBUG] authToken provided:', !!authToken);
 
   // Get the base URL from environment variables

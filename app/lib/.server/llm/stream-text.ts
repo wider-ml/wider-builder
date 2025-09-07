@@ -213,10 +213,17 @@ export async function streamText(props: {
 
     const result = await _streamText(streamOptions);
 
-    // Call credit spending API for successful Anthropic API calls
-    console.log('🔥 streamText - currentProvider:', currentProvider, 'props.authToken:', !!props.authToken);
-    if (currentProvider === 'Anthropic') {
-      console.log('🔥 streamText - Calling spendCredits for Anthropic');
+    // Call credit spending API for successful Anthropic API calls - only for code generation (build mode)
+    console.log(
+      '🔥 streamText - currentProvider:',
+      currentProvider,
+      'chatMode:',
+      chatMode,
+      'props.authToken:',
+      !!props.authToken,
+    );
+    if (currentProvider === 'Anthropic' && chatMode === 'build' && props.authToken) {
+      console.log('🔥 streamText - Calling spendCredits for Anthropic code generation (build mode)');
       try {
         await spendCredits(serverEnv as unknown as Record<string, string>, props.authToken);
       } catch (creditError) {
@@ -224,7 +231,7 @@ export async function streamText(props: {
         logger.warn('Credit spending API call failed in streamText:', creditError);
       }
     } else {
-      console.log('🔥 streamText - Not Anthropic, skipping credit spending');
+      console.log('🔥 streamText - Skipping credit spending (not Anthropic build mode with valid authToken)');
     }
 
     return result;
