@@ -324,6 +324,7 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
           designScheme,
           summary,
           messageSliceId,
+          authToken: accessToken,
         });
 
         (async () => {
