@@ -10,7 +10,7 @@ import { createScopedLogger } from '~/utils/logger';
 import { createFilesContext, extractPropertiesFromMessage } from './utils';
 import { discussPrompt } from '~/lib/common/prompts/discuss-prompt';
 import type { DesignScheme } from '~/types/design-scheme';
-import { spendCredits } from '~/lib/services/creditService';
+import { spendCredits, checkCredits } from '~/lib/services/creditService';
 
 export type Messages = Message[];
 
@@ -195,6 +195,18 @@ export async function streamText(props: {
 
   logger.info(`Sending llm call to ${provider.name} with model ${modelDetails.name}`);
 
+  // Check credits BEFORE making LLM API call for Anthropic code generation (build mode)
+  if (currentProvider === 'Anthropic' && chatMode === 'build' && props.authToken) {
+    console.log('🔥 streamText - Checking credits before LLM call');
+    try {
+      await checkCredits(serverEnv as unknown as Record<string, string>, props.authToken);
+    } catch (creditError: any) {
+      console.log('💳 streamText - Credit check failed:', creditError.message);
+      // Re-throw the error to stop the LLM call
+      throw creditError;
+    }
+  }
+
   // console.log(systemPrompt, processedMessages);
 
   try {
@@ -213,10 +225,17 @@ export async function streamText(props: {
 
     const result = await _streamText(streamOptions);
 
-    // Call credit spending API for successful Anthropic API calls
-    console.log('🔥 streamText - currentProvider:', currentProvider, 'props.authToken:', !!props.authToken);
-    if (currentProvider === 'Anthropic') {
-      console.log('🔥 streamText - Calling spendCredits for Anthropic');
+    // Call credit spending API for successful Anthropic API calls - only for code generation (build mode)
+    console.log(
+      '🔥 streamText - currentProvider:',
+      currentProvider,
+      'chatMode:',
+      chatMode,
+      'props.authToken:',
+      !!props.authToken,
+    );
+    if (currentProvider === 'Anthropic' && chatMode === 'build' && props.authToken) {
+      console.log('🔥 streamText - Calling spendCredits for Anthropic code generation (build mode)');
       try {
         await spendCredits(serverEnv as unknown as Record<string, string>, props.authToken);
       } catch (creditError) {
@@ -224,7 +243,7 @@ export async function streamText(props: {
         logger.warn('Credit spending API call failed in streamText:', creditError);
       }
     } else {
-      console.log('🔥 streamText - Not Anthropic, skipping credit spending');
+      console.log('🔥 streamText - Skipping credit spending (not Anthropic build mode with valid authToken)');
     }
 
     return result;

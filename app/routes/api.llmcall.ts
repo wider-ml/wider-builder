@@ -8,7 +8,7 @@ import { LLMManager } from '~/lib/modules/llm/manager';
 import type { ModelInfo } from '~/lib/modules/llm/types';
 import { getApiKeysFromCookie, getProviderSettingsFromCookie } from '~/lib/api/cookies';
 import { createScopedLogger } from '~/utils/logger';
-import { spendCredits } from '~/lib/services/creditService';
+import { spendCredits, checkCredits } from '~/lib/services/creditService';
 
 export async function action(args: ActionFunctionArgs) {
   return llmCallAction(args);
@@ -26,12 +26,13 @@ async function getModelList(options: {
 const logger = createScopedLogger('api.llmcall');
 
 async function llmCallAction({ context, request }: ActionFunctionArgs) {
-  const { system, message, model, provider, streamOutput } = await request.json<{
+  const { system, message, model, provider, streamOutput, isCodeGeneration } = await request.json<{
     system: string;
     message: string;
     model: string;
     provider: ProviderInfo;
     streamOutput?: boolean;
+    isCodeGeneration?: boolean;
   }>();
 
   const { name: providerName } = provider;
@@ -52,8 +53,39 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
   }
 
   const cookieHeader = request.headers.get('Cookie');
+  const authHeader = request.headers.get('authorization');
   const apiKeys = getApiKeysFromCookie(cookieHeader);
   const providerSettings = getProviderSettingsFromCookie(cookieHeader);
+
+  // Check credits BEFORE making LLM API call for Anthropic code generation
+  if (providerName === 'Anthropic' && isCodeGeneration) {
+    console.log('🔥 api.llmcall - Checking credits before LLM call');
+    try {
+      const token = authHeader?.replace('Bearer ', '');
+      await checkCredits(
+        (context.cloudflare?.env as unknown as Record<string, string>) || (process.env as Record<string, string>),
+        token,
+      );
+    } catch (creditError: any) {
+      console.log('💳 api.llmcall - Credit check failed:', creditError.message);
+
+      // Return credit error to client
+      const errorResponse = {
+        error: true,
+        message: creditError.message || 'Credit check failed',
+        statusCode: creditError.statusCode || 402,
+        isRetryable: false,
+        provider: providerName,
+        creditError: true,
+      };
+
+      return new Response(JSON.stringify(errorResponse), {
+        status: errorResponse.statusCode,
+        headers: { 'Content-Type': 'application/json' },
+        statusText: 'Payment Required',
+      });
+    }
+  }
 
   if (streamOutput) {
     try {
@@ -72,10 +104,9 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
         providerSettings,
       });
 
-      // Call credit spending API for successful Anthropic API calls (streaming)
-      console.log('🔥 api.llmcall (streaming) - providerName:', providerName);
-      if (providerName === 'Anthropic') {
-        console.log('🔥 api.llmcall (streaming) - Calling spendCredits for Anthropic');
+      // Call credit spending API for successful Anthropic API calls (streaming) - only for code generation
+      if (providerName === 'Anthropic' && isCodeGeneration) {
+        console.log('🔥 api.llmcall (streaming) - Calling spendCredits for Anthropic code generation');
         try {
           const authHeader = request.headers.get('authorization');
           const token = authHeader?.replace('Bearer ', '');
@@ -89,7 +120,7 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
           logger.warn('❌ Credit spending API call failed (streaming):', creditError);
         }
       } else {
-        console.log('🔥 api.llmcall (streaming) - Not Anthropic, skipping credit spending');
+        console.log('🔥 api.llmcall (streaming) - Skipping credit spending (not Anthropic code generation)');
       }
 
       return new Response(result.textStream, {
@@ -156,10 +187,15 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
       });
       logger.info(`Generated response`);
 
-      // Call credit spending API for successful Anthropic API calls
-      console.log('🔥 api.llmcall (non-streaming) - providerName:', providerName);
-      if (providerName === 'Anthropic') {
-        console.log('🔥 api.llmcall (non-streaming) - Calling spendCredits for Anthropic');
+      // Call credit spending API for successful Anthropic API calls - only for code generation
+      console.log(
+        '🔥 api.llmcall (non-streaming) - providerName:',
+        providerName,
+        'isCodeGeneration:',
+        isCodeGeneration,
+      );
+      if (providerName === 'Anthropic' && isCodeGeneration) {
+        console.log('🔥 api.llmcall (non-streaming) - Calling spendCredits for Anthropic code generation');
         try {
           const authHeader = request.headers.get('authorization');
           const token = authHeader?.replace('Bearer ', '');
@@ -173,7 +209,7 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
           logger.warn('❌ Credit spending API call failed (non-streaming):', creditError);
         }
       } else {
-        console.log('🔥 api.llmcall (non-streaming) - Not Anthropic, skipping credit spending');
+        console.log('🔥 api.llmcall (non-streaming) - Skipping credit spending (not Anthropic code generation)');
       }
 
       return new Response(JSON.stringify(result), {
@@ -191,7 +227,26 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
         statusCode: (error as any).statusCode || 500,
         isRetryable: (error as any).isRetryable !== false,
         provider: (error as any).provider || 'unknown',
+        creditError: (error as any).creditError || false,
       };
+
+      // Handle credit errors specifically
+      if (error instanceof Error && (error as any).creditError) {
+        return new Response(
+          JSON.stringify({
+            ...errorResponse,
+            message: error.message,
+            statusCode: (error as any).statusCode || 402,
+            isRetryable: false,
+            creditError: true,
+          }),
+          {
+            status: (error as any).statusCode || 402,
+            headers: { 'Content-Type': 'application/json' },
+            statusText: 'Payment Required',
+          },
+        );
+      }
 
       if (error instanceof Error && error.message?.includes('API key')) {
         return new Response(

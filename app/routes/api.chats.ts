@@ -74,8 +74,6 @@ export const action: ActionFunction = async ({ request, context }) => {
     const authHeader = request.headers.get('authorization');
     const token = authHeader?.replace('Bearer ', '');
 
-    console.log('Auth  token:', token);
-
     if (!token) {
       return json({ error: 'No authorization token provided' }, { status: 401 });
     }
@@ -100,7 +98,6 @@ export const action: ActionFunction = async ({ request, context }) => {
     };
 
     logger.info(`Attempting to save chat to Django API: ${API_ROOT_URL}/api/v1/web-projects/`);
-    logger.info(`Chat data:`, { chatId: chatData.id, description: chatData.description });
 
     // Send to Django API
     const response = await fetch(`${API_ROOT_URL}/api/v1/web-projects/`, {

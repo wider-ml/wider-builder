@@ -334,6 +334,7 @@ export const ChatImpl = memo(
           provider: provider.name,
           type: 'unknown' as const,
           retryDelay: 0,
+          creditError: false,
         };
 
         if (error.message) {
@@ -346,12 +347,49 @@ export const ChatImpl = memo(
               errorInfo.message = error.message;
             }
           } catch {
+            // If it's not JSON, use the raw message
             errorInfo.message = error.message;
           }
         }
 
+        // Handle case where error message might be wrapped with "Custom error: "
+        if (errorInfo.message && errorInfo.message.startsWith('Custom error: ')) {
+          errorInfo.message = errorInfo.message.replace('Custom error: ', '');
+        }
+
         let errorType: LlmErrorAlertType['errorType'] = 'unknown';
         let title = 'Request Failed';
+
+        // Handle credit errors specifically
+        if (errorInfo.creditError || errorInfo.statusCode === 402 || 
+            errorInfo.message.toLowerCase().includes('insufficient credit') ||
+            errorInfo.message.toLowerCase().includes('insufficient credits')) {
+          errorType = 'quota';
+          title = 'Insufficient Credits';
+          // Show toast message for credit errors
+          toast.error('Insufficient Credits');
+          
+          logStore.logError(`${context} request failed - insufficient credits`, error, {
+            component: 'Chat',
+            action: 'request',
+            error: errorInfo.message,
+            context,
+            retryable: false,
+            errorType: 'quota',
+            provider: provider.name,
+          });
+
+          // Create credit error alert
+          setLlmErrorAlert({
+            type: 'error',
+            title,
+            description: errorInfo.message,
+            provider: provider.name,
+            errorType: 'quota',
+          });
+          setData([]);
+          return;
+        }
 
         if (errorInfo.statusCode === 401 || errorInfo.message.toLowerCase().includes('api key')) {
           errorType = 'authentication';
