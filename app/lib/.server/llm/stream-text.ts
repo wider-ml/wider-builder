@@ -10,7 +10,7 @@ import { createScopedLogger } from '~/utils/logger';
 import { createFilesContext, extractPropertiesFromMessage } from './utils';
 import { discussPrompt } from '~/lib/common/prompts/discuss-prompt';
 import type { DesignScheme } from '~/types/design-scheme';
-import { spendCredits } from '~/lib/services/creditService';
+import { spendCredits, checkCredits } from '~/lib/services/creditService';
 
 export type Messages = Message[];
 
@@ -194,6 +194,18 @@ export async function streamText(props: {
   }
 
   logger.info(`Sending llm call to ${provider.name} with model ${modelDetails.name}`);
+
+  // Check credits BEFORE making LLM API call for Anthropic code generation (build mode)
+  if (currentProvider === 'Anthropic' && chatMode === 'build' && props.authToken) {
+    console.log('🔥 streamText - Checking credits before LLM call');
+    try {
+      await checkCredits(serverEnv as unknown as Record<string, string>, props.authToken);
+    } catch (creditError: any) {
+      console.log('💳 streamText - Credit check failed:', creditError.message);
+      // Re-throw the error to stop the LLM call
+      throw creditError;
+    }
+  }
 
   // console.log(systemPrompt, processedMessages);
 

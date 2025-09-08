@@ -339,7 +339,13 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
         })();
         result.mergeIntoDataStream(dataStream);
       },
-      onError: (error: any) => `Custom error: ${error.message}`,
+      onError: (error: any) => {
+        // For credit errors, return the original message without wrapping
+        if (error.creditError || error.statusCode === 402) {
+          return error.message;
+        }
+        return `Custom error: ${error.message}`;
+      },
     }).pipeThrough(
       new TransformStream({
         transform: (chunk, controller) => {
@@ -396,7 +402,26 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
       statusCode: error.statusCode || 500,
       isRetryable: error.isRetryable !== false, // Default to retryable unless explicitly false
       provider: error.provider || 'unknown',
+      creditError: error.creditError || false,
     };
+
+    // Handle credit errors specifically
+    if (error.creditError) {
+      return new Response(
+        JSON.stringify({
+          ...errorResponse,
+          message: error.message,
+          statusCode: error.statusCode || 402,
+          isRetryable: false,
+          creditError: true,
+        }),
+        {
+          status: error.statusCode || 402,
+          headers: { 'Content-Type': 'application/json' },
+          statusText: 'Payment Required',
+        },
+      );
+    }
 
     if (error.message?.includes('API key')) {
       return new Response(
